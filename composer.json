@@ -1,0 +1,29 @@
+{
+    "name": "verdient/hyperf3-database",
+    "type": "library",
+    "require": {
+        "hyperf/codec": "^3.1",
+        "hyperf/collection": "^3.1",
+        "hyperf/config": "^3.1",
+        "hyperf/database": "^3.1",
+        "hyperf/db-connection": "^3.1",
+        "hyperf/event": "^3.1",
+        "hyperf/logger": "^3.1",
+        "hyperf/stringable": "^3.1",
+        "psr/container": "^2.0",
+        "psr/log": "^3.0",
+        "verdient/cli": "^0.0",
+        "hyperf/contract": "^3.1",
+        "hyperf/constants": "^3.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Verdient\\Hyperf3\\Database\\": "src"
+        }
+    },
+    "extra": {
+        "hyperf": {
+            "config": "Verdient\\Hyperf3\\Database\\ConfigProvider"
+        }
+    }
+}
