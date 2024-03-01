@@ -17,6 +17,7 @@ use Iterator;
  * @method static withoutTrashed()
  * @method bool exists()
  * @method static select(array|mixed $columns = ['*'])
+ * @method static whereNull(array|string $columns, string $boolean = 'and', bool $not = false)
  * @method static whereNotNull(string $column, string $boolean = 'and')
  * @method static lockForUpdate()
  * @method static inRandomOrder(string $seed = '')
