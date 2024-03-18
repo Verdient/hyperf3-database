@@ -121,6 +121,18 @@ class Models
     public function execute(string $method): bool
     {
         $isOK = true;
+        $count = $this->models;
+
+        if ($count === 0) {
+            return true;
+        }
+
+        if ($count === 1) {
+            foreach ($this->each() as $model) {
+                return (bool) call_user_func([$model, $method]);
+            }
+        }
+
         $this->beginTransaction();
         try {
             foreach ($this->each() as $model) {
