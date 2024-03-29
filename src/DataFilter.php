@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Verdient\Hyperf3\Database;
 
+use Hyperf\DbConnection\Db;
+
 /**
  * 数据过滤器
  * @author Verdient。
@@ -11,34 +13,22 @@ namespace Verdient\Hyperf3\Database;
 class DataFilter
 {
     /**
-     * 规则
+     * @var FilterRule[] 规则
      * @author Verdient。
      */
     protected array $rules = [];
 
     /**
-     * 关联规则
+     * 关联
      * @author Verdient。
      */
-    protected array $hasRules = [];
+    protected array $relations = [];
 
     /**
-     * 连接规则
+     * 是否无需查询
      * @author Verdient。
      */
-    protected array $joinRules = [];
-
-    /**
-     * 无关联规则
-     * @author Verdient。
-     */
-    protected array $doesntHaveRules = [];
-
-    /**
-     * 存在规则
-     * @author Verdient。
-     */
-    protected array $existRules = [];
+    protected bool $isNeedless = false;
 
     /**
      * 构造函数
@@ -47,6 +37,16 @@ class DataFilter
      */
     public function __construct(protected array $querys)
     {
+    }
+
+    /**
+     * 创建新的数据过滤器
+     * @param array $querys 查询参数
+     * @author Verdient。
+     */
+    public static function create(array $querys): static
+    {
+        return new static($querys);
     }
 
     /**
@@ -70,207 +70,37 @@ class DataFilter
     }
 
     /**
+     * 获取是否无需查询
+     * @author Verdient。
+     */
+    public function getIsNeedless(): bool
+    {
+        return $this->isNeedless;
+    }
+
+    /**
      * 添加规则
      * @param string $name 参数名称
      * @param string $operator 操作符
-     * @param string|array $field 字段
+     * @param string|array|Relation|null $field 字段
      * @param bool $skipEmpty 为空时是否跳过
      * @param string $boolean 规则间的关系
      * @return static
      * @author Verdient。
      */
-    public function addRule($name, $operator = '=', $field = null, $skipEmpty = true, $boolean = 'and')
-    {
-        $this->rules[] = [
-            'name' => $name,
-            'field' => $field,
-            'operator' => $operator,
-            'skipEmpty' => $skipEmpty,
-            'boolean' => $boolean
-        ];
-        return $this;
-    }
-
-    /**
-     * 添加无关联规则
-     * @param string $relation 关联关系
-     * @param string $name 参数名称
-     * @param string $operator 操作符
-     * @param string $field 字段
-     * @param bool $skipEmpty 为空时是否跳过
-     * @param string $boolean 规则间的关系
-     * @return static
-     * @author Verdient。
-     */
-    public function addDoesntHaveRule($relation, $name,  $operator = '=', $field = null, $skipEmpty = true, $boolean = 'and')
-    {
-        $this->doesntHaveRules[] = [
-            'relation' => $relation,
-            'name' => $name,
-            'operator' => $operator,
-            'field' => $field,
-            'skipEmpty' => $skipEmpty,
-            'boolean' => $boolean
-        ];
-        return $this;
-    }
-
-    /**
-     * 添加存在规则
-     * @param string $relation 关联关系
-     * @param string $name 参数名称
-     * @param string $operator 操作符
-     * @param string $field 字段
-     * @param bool $skipEmpty 为空时是否跳过
-     * @param string $boolean 规则间的关系
-     * @return static
-     * @author Verdient。
-     */
-    public function addHasRule($relation, $name, $operator = '=', $field = null, $skipEmpty = true, $boolean = 'and')
-    {
-        $this->hasRules[] = [
-            'relation' => $relation,
-            'name' => $name,
-            'operator' => $operator,
-            'field' => $field,
-            'skipEmpty' => $skipEmpty,
-            'boolean' => $boolean
-        ];
-        return $this;
-    }
-
-    /**
-     * 添加存在规则
-     * @param string $relation 关联关系
-     * @param string $name 参数名称
-     * @param bool $skipEmpty 为空时是否跳过
-     * @param string $boolean 规则间的关系
-     * @return static
-     * @author Verdient。
-     */
-    public function addExistRule($relation, $name, $skipEmpty = true, $boolean = 'and')
-    {
-        $this->existRules[] = [
-            'relation' => $relation,
-            'name' => $name,
-            'skipEmpty' => $skipEmpty,
-            'boolean' => $boolean
-        ];
-        return $this;
-    }
-
-    /**
-     * 添加连接规则
-     * @param string $relation 关联关系
-     * @param string $name 参数名称
-     * @param string $operator 操作符
-     * @param string $field 字段
-     * @param bool $skipEmpty 为空时是否跳过
-     * @param string $boolean 规则间的关系
-     * @return static
-     * @author Verdient。
-     */
-    public function addJoinRule($relation, $name, $operator = '=', $field = null, $skipEmpty = true, $boolean = 'and')
-    {
-        $this->joinRules[] = [
-            'relation' => $relation,
-            'name' => $name,
-            'operator' => $operator,
-            'field' => $field,
-            'skipEmpty' => $skipEmpty,
-            'boolean' => $boolean
-        ];
-        return $this;
-    }
-
-    /**
-     * 获取活跃的规则
-     * @return array
-     * @author Verdient。
-     */
-    public function getActiveRules()
-    {
-        $rules = [];
-        foreach ($this->rules as $rule) {
-            $value = $this->getQuery($rule['name']);
-            if ($value !== false) {
-                if ($value !== '' || $rule['skipEmpty'] === false) {
-                    $rule['value'] = $value;
-                    if ($rule['field'] === null) {
-                        $rule['field'] = $rule['name'];
-                    }
-                    $rules[] = $rule;
-                }
-            }
+    public function addRule(
+        string|FilterRule $name,
+        string $operator = '=',
+        string|array|Relation|null $field = null,
+        bool $skipEmpty = true,
+        string $boolean = 'and'
+    ) {
+        if ($name instanceof FilterRule) {
+            $this->rules[] = $name;
+        } else {
+            $this->rules[] = FilterRule::create($name, $operator, $field, $skipEmpty, $boolean);
         }
-        return $rules;
-    }
-
-    /**
-     * 获取活跃的存在规则
-     * @return array
-     * @author Verdient。
-     */
-    public function getActiveHasRules()
-    {
-        return $this->getActiveRelationRules('hasRules');
-    }
-
-    /**
-     * 获取活跃的不存在规则
-     * @return array
-     * @author Verdient。
-     */
-    public function getActiveDoesntHaveRules()
-    {
-        return $this->getActiveRelationRules('doesntHaveRules');
-    }
-
-    /**
-     * 获取活跃的关联规格
-     * @param string $type 关联类型
-     * @return array
-     * @author Verdient。
-     */
-    protected function getActiveRelationRules($type)
-    {
-        $rules = [];
-        foreach ($this->$type as $rule) {
-            $value = $this->getQuery($rule['name']);
-            if ($value !== false) {
-                if ($value !== '' || $rule['skipEmpty'] === false) {
-                    if (!isset($rules[$rule['relation']])) {
-                        $rules[$rule['relation']] = [];
-                    }
-                    $rule['value'] = $value;
-                    if ($rule['field'] === null) {
-                        $rule['field'] = $rule['name'];
-                    }
-                    $rules[$rule['relation']][] = $rule;
-                }
-            }
-        }
-        return $rules;
-    }
-
-    /**
-     * 获取活跃的存在规则
-     * @return array
-     * @author Verdient。
-     */
-    public function getActiveExistRules()
-    {
-        $rules = [];
-        foreach ($this->existRules as $rule) {
-            $value = $this->getQuery($rule['name']);
-            if ($value !== false) {
-                if ($value !== '' || $rule['skipEmpty'] === false) {
-                    $rule['value'] = $value;
-                    $rules[] = $rule;
-                }
-            }
-        }
-        return $rules;
+        return $this;
     }
 
     /**
@@ -281,133 +111,16 @@ class DataFilter
      */
     public function build(Builder $builder): Builder
     {
-        foreach ($this->getActiveRules() as $rule) {
-            $this->buildWhere($builder, $rule);
-        }
-        foreach ([
-            'hasRules' => 'whereHas',
-            'doesntHaveRules' => 'whereDoesntHave'
-        ] as $type => $method) {
-            foreach ($this->getActiveRelationRules($type) as $relation => $rules) {
-                call_user_func([$builder, $method], $relation, function ($builder2) use ($rules) {
-                    foreach ($rules as $rule) {
-                        $this->buildWhere($builder2, $rule);
-                    }
-                });
+        foreach ($this->rules as $rule) {
+            if (!$rule->filterable($this->querys)) {
+                continue;
             }
-        }
-        foreach ($this->getActiveExistRules() as $rule) {
-            if ($this->isTrue($rule['value'])) {
-                $builder->has($rule['relation'], '>=', 1, $rule['boolean']);
-            } else if ($this->isFalse($rule['value'])) {
-                $builder->doesntHave($rule['relation'], $rule['boolean']);
-            }
-        }
-        $joinRules = $this->getActiveRelationRules('joinRules');
-        if (!empty($joinRules)) {
-            $builder->groupBy($builder->getModel()->getKeyName());
-            foreach ($joinRules as $relation => $rules) {
-                $table = $builder->getRelationDefinition($relation)->getRelated()->getTable();
-                $builder->joinWith($relation);
-                foreach ($rules as $rule) {
-                    if (strpos($rule['field'], '.') === false) {
-                        $rule['field'] = $table . '.' . $rule['field'];
-                    }
-                    $this->buildWhere($builder, $rule, true);
-                }
+            if (!$rule->filter($builder, $this->querys)) {
+                $this->isNeedless = true;
+                $builder->where(Db::raw(0), '=', Db::raw(1));
+                break;
             }
         }
         return $builder;
-    }
-
-    /**
-     * 构建检索条件
-     * @param Builder 构建器
-     * @param array $rule 规则
-     * @param bool $isJoin 是否是连接条件
-     * @author Verdient。
-     */
-    protected function buildWhere(Builder $builder, $rule)
-    {
-        if (!is_array($rule['field'])) {
-            $field = $rule['field'];
-            switch ($rule['operator']) {
-                case 'isNotNull':
-                    $builder->whereNull($field, $rule['boolean'], $this->isTrue($rule['value']));
-                    break;
-                case 'isNull':
-                    $builder->whereNull($field, $rule['boolean'], $this->isFalse($rule['value']));
-                    break;
-                case 'like':
-                    $builder->where($field, 'like', '%' . $rule['value'] . '%', $rule['boolean']);
-                    break;
-                case 'in':
-                    if (!is_array($rule['value'])) {
-                        $rule['value'] = [$rule['value']];
-                    }
-                    $builder->whereIn($field, $rule['value'], $rule['boolean']);
-                    break;
-                default:
-                    $builder->where($field, $rule['operator'], $rule['value'], $rule['boolean']);
-                    break;
-            }
-        } else {
-            $fields = $rule['field'];
-            $boolean = array_shift($fields);
-            $builder->where(function ($query) use ($fields, $rule, $boolean) {
-                switch ($rule['operator']) {
-                    case 'isNotNull':
-                        foreach ($fields as $field) {
-                            $query->whereNull($field, $boolean, $this->isTrue($rule['value']));
-                        }
-                        break;
-                    case 'isNull':
-                        foreach ($fields as $field) {
-                            $query->whereNull($field, $boolean, $this->isFalse($rule['value']));
-                        }
-                        break;
-                    case 'like':
-                        foreach ($fields as $field) {
-                            $query->where($field, 'like', '%' . $rule['value'] . '%', $boolean);
-                        }
-                        break;
-                    case 'in':
-                        if (!is_array($rule['value'])) {
-                            $rule['value'] = [$rule['value']];
-                        }
-                        foreach ($fields as $field) {
-                            $query->whereIn($field, $rule['value'], $boolean);
-                        }
-                        break;
-                    default:
-                        foreach ($fields as $field) {
-                            $query->where($field, $rule['operator'], $rule['value'], $boolean);
-                        }
-                        break;
-                }
-            }, null, null, $rule['boolean']);
-        }
-    }
-
-    /**
-     * 判断是否为真
-     * @param mixed $value 待判断的值
-     * @return bool
-     * @author Verdient。
-     */
-    protected function isTrue($value)
-    {
-        return $value === true || $value === 1 || $value === '1';
-    }
-
-    /**
-     * 判断是否为假
-     * @param mixed $value 待判断的值
-     * @return bool
-     * @author Verdient。
-     */
-    protected function isFalse($value)
-    {
-        return $value === false || $value === 0 || $value === '0';
     }
 }

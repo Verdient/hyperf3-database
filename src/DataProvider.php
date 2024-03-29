@@ -327,7 +327,7 @@ class DataProvider implements Arrayable, Jsonable
     {
         if ($this->models === null) {
             $builder = $this->getBuilder();
-            if ($this->getCount() > 0) {
+            if (!$this->filter->getIsNeedless() && $this->getCount() > 0) {
                 $this->models = $builder
                     ->select($this->getColumns())
                     ->forPage($this->getPage(), $this->getPageSize())
@@ -346,10 +346,14 @@ class DataProvider implements Arrayable, Jsonable
     protected function getCount(): int
     {
         if ($this->count === null) {
-            $this->count = $this
-                ->getBuilder()
-                ->toBase()
-                ->getCountForPagination();
+            $builder = $this->getBuilder();
+            if ($this->filter->getIsNeedless()) {
+                $this->count = 0;
+            } else {
+                $this->count = $builder
+                    ->toBase()
+                    ->getCountForPagination();
+            }
         }
         return $this->count;
     }
