@@ -14,7 +14,7 @@ class FilterRule
      * 关联关系
      * @author Verdient。
      */
-    protected ?Relation $relation;
+    protected ?Relation $relation = null;
 
     /**
      * @param string $name 参数名称
