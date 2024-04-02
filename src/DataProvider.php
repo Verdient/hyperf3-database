@@ -31,7 +31,7 @@ class DataProvider implements Arrayable, Jsonable
      * 字段
      * @author Verdient。
      */
-    protected array $columns = ['*'];
+    protected array $columns = [];
 
     /**
      * 排序
@@ -328,8 +328,11 @@ class DataProvider implements Arrayable, Jsonable
         if ($this->models === null) {
             $builder = $this->getBuilder();
             if (!$this->filter->getIsNeedless() && $this->getCount() > 0) {
+                $columns = $this->getColumns();
+                if (!empty($columns)) {
+                    $builder->select($columns);
+                }
                 $this->models = $builder
-                    ->select($this->getColumns())
                     ->forPage($this->getPage(), $this->getPageSize())
                     ->get();
             } else {
