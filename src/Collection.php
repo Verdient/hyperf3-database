@@ -13,6 +13,11 @@ use Hyperf\Database\Model\Collection as ModelCollection;
  * @inheritdoc
  * @method static keyBy(string|int $keyBy)
  * @method static map(\Closure $callback)
+ * @method mixed max(string|callable|null $callback)
+ * @method mixed min(string|callable|null $callback)
+ * @method mixed sum(string|callable|null $callback)
+ * @method mixed avg(string|callable|null $callback)
+ * @method mixed average(string|callable|null $callback)
  * @author Verdient。
  */
 class Collection extends ModelCollection
