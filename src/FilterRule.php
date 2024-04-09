@@ -195,6 +195,9 @@ class FilterRule
                     $builder->whereIn($relation->getForeignKey(), $values, $this->boolean);
                 }
                 break;
+            case 'inSub':
+                $builder->whereIn($relation->getForeignKey(), $builder2->select([$relation->getLocalKey()]), $this->boolean);
+                break;
             case '=':
                 $value = $builder2->value($relation->getLocalKey());
                 if (is_null($value)) {

@@ -6,6 +6,8 @@ namespace Verdient\Hyperf3\Database;
 
 use Closure;
 use Hyperf\Contract\Arrayable;
+use Hyperf\Database\Model\Builder as ModelBuilder;
+use Hyperf\Database\Query\Builder as QueryBuilder;
 use Iterator;
 
 /**
@@ -40,9 +42,6 @@ use Iterator;
  * @method static orWhereJsonLength(string $column, mixed $operator, null|mixed $value = null)
  * @method static whereRaw(string $sql, mixed $bindings = [], string $boolean = 'and')
  * @method static whereRowValues(array $columns, string $operator, array $values, string $boolean = 'and')
- * @method static whereInSub(string $column, Closure $callback, string $boolean, bool $not)
- * @method static whereInExistingQuery(string $column, \Hyperf\Database\Query\Builder|static $query, string $boolean, bool $not)
- * @method static whereSub(string $column, string $operator, Closure $callback, string $boolean)
  * @method static having(string $column, null|string $operator = null, null|string $value = null, string $boolean = 'and')
  * @method int count(string $columns = '*')
  * @method int min(string $column)
@@ -56,28 +55,32 @@ use Iterator;
  * @method static forPage(int $page, int $perPage = 15)
  * @author Verdient。
  */
-class Builder extends \Hyperf\Database\Model\Builder
+class Builder extends ModelBuilder
 {
     /**
      * In条件
      * @param string $column 字段
-     * @param array $values 值
+     * @param array|static|Closure $values 值
      * @param string $boolean 连接关系
      * @param bool $not 是否是NOT
      * @return static
      * @author Verdient。
      */
-    public function whereIn($column, $values, $boolean = 'and', $not = false)
+    public function whereIn($column, array|QueryBuilder|ModelBuilder|Closure $values, $boolean = 'and', $not = false)
     {
-        if ($values instanceof Arrayable) {
-            $values = $values->toArray();
-        }
-        $values = array_unique($values);
-        if (count($values) === 1) {
-            $operator = $not ? '!=' : '=';
-            parent::where($column, $operator, reset($values), $boolean);
-        } else {
+        if ($values instanceof QueryBuilder || $values instanceof ModelBuilder || $values instanceof Closure) {
             parent::whereIn($column, $values, $boolean, $not);
+        } else {
+            if ($values instanceof Arrayable) {
+                $values = $values->toArray();
+            }
+            $values = array_unique($values);
+            if (count($values) === 1) {
+                $operator = $not ? '!=' : '=';
+                parent::where($column, $operator, reset($values), $boolean);
+            } else {
+                parent::whereIn($column, $values, $boolean, $not);
+            }
         }
         return $this;
     }
