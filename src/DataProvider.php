@@ -327,7 +327,7 @@ class DataProvider implements Arrayable, Jsonable
     {
         if ($this->models === null) {
             $builder = $this->getBuilder();
-            if (!$this->filter->getIsNeedless() && $this->getCount() > 0) {
+            if ($this->getCount() > 0) {
                 $columns = $this->getColumns();
                 if (!empty($columns)) {
                     $builder->select($columns);
@@ -350,7 +350,7 @@ class DataProvider implements Arrayable, Jsonable
     {
         if ($this->count === null) {
             $builder = $this->getBuilder();
-            if ($this->filter->getIsNeedless()) {
+            if ($this->filter && $this->filter->getIsNeedless()) {
                 $this->count = 0;
             } else {
                 $this->count = $builder
