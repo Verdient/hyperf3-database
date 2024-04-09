@@ -60,13 +60,13 @@ class Builder extends ModelBuilder
     /**
      * In条件
      * @param string $column 字段
-     * @param array|static|Closure $values 值
+     * @param array|Arrayable|QueryBuilder|ModelBuilder|Closure $values 值
      * @param string $boolean 连接关系
      * @param bool $not 是否是NOT
      * @return static
      * @author Verdient。
      */
-    public function whereIn($column, array|QueryBuilder|ModelBuilder|Closure $values, $boolean = 'and', $not = false)
+    public function whereIn(string $column, array|Arrayable|QueryBuilder|ModelBuilder|Closure $values, string $boolean = 'and', bool $not = false)
     {
         if ($values instanceof QueryBuilder || $values instanceof ModelBuilder || $values instanceof Closure) {
             parent::whereIn($column, $values, $boolean, $not);
