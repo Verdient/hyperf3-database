@@ -43,6 +43,7 @@ use Iterator;
  * @method static whereRaw(string $sql, mixed $bindings = [], string $boolean = 'and')
  * @method static whereRowValues(array $columns, string $operator, array $values, string $boolean = 'and')
  * @method static having(string $column, null|string $operator = null, null|string $value = null, string $boolean = 'and')
+ * @method static groupBy(...$groups)
  * @method int count(string $columns = '*')
  * @method int min(string $column)
  * @method int max(string $column)
