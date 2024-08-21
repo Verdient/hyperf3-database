@@ -35,9 +35,7 @@ class DataFilter
      * @param array $querys 查询参数
      * @author Verdient。
      */
-    public function __construct(protected array $querys)
-    {
-    }
+    public function __construct(protected array $querys) {}
 
     /**
      * 创建新的数据过滤器
@@ -51,7 +49,6 @@ class DataFilter
 
     /**
      * 获取检索条件
-     * @return array
      * @author Verdient。
      */
     public function getQuerys(): array
@@ -61,10 +58,9 @@ class DataFilter
 
     /**
      * 根据名称获取检索条件
-     * @return mixed
      * @author Verdient。
      */
-    public function getQuery($name)
+    public function getQuery($name): mixed
     {
         return $this->querys[$name] ?? false;
     }
@@ -82,19 +78,18 @@ class DataFilter
      * 添加规则
      * @param string $name 参数名称
      * @param string $operator 操作符
-     * @param string|array|Relation|null $field 字段
+     * @param string|array|null $field 字段
      * @param bool $skipEmpty 为空时是否跳过
      * @param string $boolean 规则间的关系
-     * @return static
      * @author Verdient。
      */
     public function addRule(
         string|FilterRule $name,
         string $operator = '=',
-        string|array|Relation|null $field = null,
+        string|array|null $field = null,
         bool $skipEmpty = true,
         string $boolean = 'and'
-    ) {
+    ): static {
         if ($name instanceof FilterRule) {
             $this->rules[] = $name;
         } else {
@@ -106,7 +101,6 @@ class DataFilter
     /**
      * 构建
      * @param Builder 构建器
-     * @return Builder
      * @author Verdient。
      */
     public function build(Builder $builder): Builder

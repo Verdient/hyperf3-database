@@ -93,8 +93,17 @@ class DataProvider implements Arrayable, Jsonable
      * @param ?DataFilter $filter 数据过滤器
      * @author Verdient。
      */
-    public function __construct(protected Builder $builder, protected ?DataFilter $filter = null)
+    public function __construct(protected Builder $builder, protected ?DataFilter $filter = null) {}
+
+    /**
+     * 创建新的数据提供器
+     * @param Builder $builder 查询构造器
+     * @param ?DataFilter $filter 数据过滤器
+     * @author Verdient。
+     */
+    public static function create(Builder $builder, ?DataFilter $filter = null): static
     {
+        return new static($builder, $filter);
     }
 
     /**

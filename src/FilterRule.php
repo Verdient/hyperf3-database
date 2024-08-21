@@ -11,17 +11,12 @@ namespace Verdient\Hyperf3\Database;
 class FilterRule
 {
     /**
-     * 关联关系
-     * @author Verdient。
-     */
-    protected ?Relation $relation = null;
-
-    /**
      * @param string $name 参数名称
      * @param string $operator 操作符
      * @param string|string[]|null $field 字段
      * @param bool $skipEmpty 为空时是否跳过
      * @param string $boolean 规则间的关系
+     * @param ?Relation $relation 关联关系
      * @author Verdient。
      */
     public function __construct(
@@ -29,7 +24,8 @@ class FilterRule
         protected string $operator = '=',
         protected string|array|null $field = null,
         protected bool $skipEmpty = true,
-        protected string $boolean = 'and'
+        protected string $boolean = 'and',
+        protected ?Relation $relation = null,
     ) {
     }
 
