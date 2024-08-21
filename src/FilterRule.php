@@ -26,8 +26,7 @@ class FilterRule
         protected bool $skipEmpty = true,
         protected string $boolean = 'and',
         protected ?Relation $relation = null,
-    ) {
-    }
+    ) {}
 
     /**
      * 创建新的过滤规则
@@ -57,6 +56,16 @@ class FilterRule
     {
         $this->name = $name;
         return $this;
+    }
+
+    /**
+     * 设置名称
+     * @param string $name 名称
+     * @author Verdient。
+     */
+    public function getName(): string
+    {
+        return $this->name;
     }
 
     /**
@@ -136,10 +145,10 @@ class FilterRule
      */
     public function filter(Builder $builder, array $params): bool
     {
-        $value = $params[$this->name] ?? null;
         if ($this->relation) {
-            return $this->filterRelation($builder, $value);
+            return $this->filterRelation($builder, $params);
         } else {
+            $value = $params[$this->name] ?? null;
             return $this->filterNormal($builder, $value);
         }
         return true;
@@ -148,17 +157,29 @@ class FilterRule
     /**
      * 过滤关联查询
      * @param Builder $builder 查询构建器
-     * @param mixed $value 值
+     * @param array $params 参数
      * @author Verdient。
      */
-    protected function filterRelation(Builder $builder, mixed $value): bool
+    protected function filterRelation(Builder $builder, array $params): bool
     {
         /** @var Relation */
         $relation = $this->relation;
+
         $model = $relation->getModel();
+
         $filter = $relation->getDataFilter();
+
+        $filter->setQueries(array_merge($filter->getQueries(), $params));
+
+        $value = $params[$this->name] ?? null;
+
         /** @var Builder */
         $builder2 = $filter->build($model::query());
+
+        if (empty($builder2->getQuery()->wheres)) {
+            return false;
+        }
+
         switch ($this->operator) {
             case 'isNotNull':
                 $exists = $builder2->exists();

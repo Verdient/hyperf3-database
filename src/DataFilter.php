@@ -32,37 +32,50 @@ class DataFilter
 
     /**
      * 构造函数
-     * @param array $querys 查询参数
+     * @param array $queries 查询参数
      * @author Verdient。
      */
-    public function __construct(protected array $querys) {}
+    public function __construct(protected array $queries = []) {}
 
     /**
      * 创建新的数据过滤器
-     * @param array $querys 查询参数
+     * @param array $queries 查询参数
      * @author Verdient。
      */
-    public static function create(array $querys): static
+    public static function create(array $queries = []): static
     {
-        return new static($querys);
+        return new static($queries);
     }
 
     /**
-     * 获取检索条件
+     * 获取查询参数
      * @author Verdient。
      */
-    public function getQuerys(): array
+    public function getQueries(): array
     {
-        return $this->querys;
+        return $this->queries;
     }
 
     /**
-     * 根据名称获取检索条件
+     * 设置查询参数
+     * @param array $queries 查询参数
      * @author Verdient。
      */
-    public function getQuery($name): mixed
+    public function setQueries(array $queries): static
     {
-        return $this->querys[$name] ?? false;
+        $this->queries = $queries;
+        return $this;
+    }
+
+    /**
+     * 根据名称获取查询参数
+     * @param string|int|float $name 名称
+     * @param mixed $default 默认值
+     * @author Verdient。
+     */
+    public function getQuery(string|int|float $name, mixed $default = null): mixed
+    {
+        return $this->queries[$name] ?? $default;
     }
 
     /**
@@ -106,10 +119,10 @@ class DataFilter
     public function build(Builder $builder): Builder
     {
         foreach ($this->rules as $rule) {
-            if (!$rule->filterable($this->querys)) {
+            if (!$rule->filterable($this->queries)) {
                 continue;
             }
-            if (!$rule->filter($builder, $this->querys)) {
+            if (!$rule->filter($builder, $this->queries)) {
                 $this->isNeedless = true;
                 $builder->where(Db::raw(0), '=', Db::raw(1));
                 break;
