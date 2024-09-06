@@ -88,6 +88,12 @@ class DataProvider implements Arrayable, Jsonable
     protected ?Collection $models = null;
 
     /**
+     * 附加的数据
+     * @author Verdient。
+     */
+    protected array $appends = [];
+
+    /**
      * 构造函数
      * @param Builder $builder 查询构造器
      * @param ?DataFilter $filter 数据过滤器
@@ -275,6 +281,26 @@ class DataProvider implements Arrayable, Jsonable
     }
 
     /**
+     * 获取附加的数据
+     * @author Verdient。
+     */
+    public function getAppends(): array
+    {
+        return $this->appends;
+    }
+
+    /**
+     * 设置附加的数据
+     * @param array $appends 附加的数据
+     * @author Vertdient。
+     */
+    public function setAppends(array $appends): static
+    {
+        $this->appends = $appends;
+        return $this;
+    }
+
+    /**
      * 获取构建器
      * @author Verdient。
      */
@@ -434,13 +460,23 @@ class DataProvider implements Arrayable, Jsonable
      */
     public function toArray(): array
     {
-        return [
+        $result = [
             'page' => $this->getPage(),
             'page_size' => $this->getPageSize(),
             'last_page' => $this->getLastPage(),
             'count' => $this->getCount(),
             'rows' => $this->getRows()
         ];
+
+        if (!empty($this->appends)) {
+            foreach ($this->appends as $key => $value) {
+                if (!array_key_exists($key, $result)) {
+                    $result[$key] = $value;
+                }
+            }
+        }
+
+        return $result;
     }
 
     /**
