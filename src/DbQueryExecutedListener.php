@@ -98,7 +98,7 @@ class DbQueryExecutedListener implements ListenerInterface
                         } else if (is_bool($value)) {
                             $value = $value ? 'true' : 'false';
                         } else {
-                            $value = "'" . str_replace('?', $placeholder, $value) . "'";
+                            $value = "'" . str_replace('?', $placeholder, (string) $value) . "'";
                         }
                         $sql = Str::replaceFirst('?', $value, $sql);
                     }
