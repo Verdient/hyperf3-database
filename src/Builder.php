@@ -25,7 +25,6 @@ use Iterator;
  * @method static inRandomOrder(string $seed = '')
  * @method static limit(int $value)
  * @method static offset(int $value)
- * @method static whereNotIn(string $column, string $values, $boolean = 'and')
  * @method static orderBy(string $column, string $direction = 'asc')
  * @method static orderByDesc(string $column)
  * @method static take(int $value)
@@ -84,6 +83,19 @@ class Builder extends ModelBuilder
             }
         }
         return $this;
+    }
+
+    /**
+     * NotIn条件
+     * @param string $column 字段
+     * @param array|Arrayable|QueryBuilder|ModelBuilder|Closure $values 值
+     * @param string $boolean 连接关系
+     * @return static
+     * @author Verdient。
+     */
+    public function whereNotIn(string $column, array|Arrayable|QueryBuilder|ModelBuilder|Closure $values, string $boolean = 'and', bool $not = false)
+    {
+        return $this->whereIn($column, $values, $boolean, true);
     }
 
     /**
