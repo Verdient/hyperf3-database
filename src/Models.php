@@ -4,86 +4,145 @@ declare(strict_types=1);
 
 namespace Verdient\Hyperf3\Database;
 
-use Hyperf\Database\ConnectionInterface;
+use Closure;
+use Generator;
 use Hyperf\DbConnection\Db;
-use Iterator;
+use Hyperf\DbConnection\Model\Model;
+use InvalidArgumentException;
+use RuntimeException;
+use Verdient\Hyperf3\Database\Model\ModelInterface;
 
 /**
  * 模型集合
+ *
  * @author Verdient。
  */
 class Models
 {
     /**
-     * @var AbstractModel[] 模型集合
+     *
+     * @var ModelUnit[] 模型单元集合
+     *
      * @author Verdient。
      */
-    protected array $models = [];
+    protected array $modelUnits = [];
 
     /**
-     * 添加模型
-     * @param AbstractModel $model 模型
-     * @return static
+     * @var bool 是否启用优化
+     *
      * @author Verdient。
      */
-    public function attach(AbstractModel $model): static
+    protected bool $optimize = true;
+
+    /**
+     * 启用优化
+     *
+     * @author Verdient。
+     */
+    public function enableOptimize(): static
     {
-        $class = get_class($model);
-        $key = $class . '\\' . $model->getKeyOrGenerate();
-        $this->models[$key] = $model;
+        $this->optimize = true;
+        return $this;
+    }
+
+    /**
+     * 禁用优化
+     *
+     * @author Verdient。
+     */
+    public function disableOptimize(): static
+    {
+        $this->optimize = false;
         return $this;
     }
 
     /**
      * 添加模型
+     *
+     * @param ModelInterface|Model|Closure $model 模型
+     * @param ?Execution $execution 要执行的方法
+     *
+     * @author Verdient。
+     */
+    public function attach(ModelInterface|Model|Closure $model, ?Execution $execution = null): static
+    {
+        if (
+            $model instanceof Closure
+            && $execution !== null
+        ) {
+            throw new InvalidArgumentException('When the Model parameter is set to Closure, the execution parameter must be null.');
+        }
+
+        $this->modelUnits[spl_object_id($model)] = new ModelUnit($model, $execution);
+
+        return $this;
+    }
+
+    /**
+     * 添加模型
+     *
      * @param Models $models 模型集合
-     * @return static
+     *
      * @author Verdient。
      */
     public function merge(Models $models): static
     {
-        foreach ($models->each() as $model) {
-            $this->attach($model);
+        foreach ($models->each() as $modelUnit) {
+            $this->attach($modelUnit->model, $modelUnit->execution);
         }
+
         return $this;
     }
 
     /**
      * 逐一迭代
-     * @return AbstractModel[]
+     *
+     * @return Generator<ModelUnit>
      * @author Verdient。
      */
-    public function each(): Iterator
+    public function each(): Generator
     {
-        foreach ($this->models as $model) {
-            yield $model;
+        foreach ($this->modelUnits as $modelUnit) {
+            yield $modelUnit;
         }
     }
 
     /**
      * 获取连接对象集合
-     * @return ConnectionInterface[]
+     *
+     * @return Connection[]
      * @author Verdient。
      */
     public function getConnections(): array
     {
         $connectionNames = [];
-        foreach ($this->each() as $model) {
-            $connectionNames[] = $model->getConnectionName();
+
+        foreach ($this->each() as $modelUnit) {
+            if ($modelUnit->model instanceof ModelInterface) {
+                $connectionNames[] = $modelUnit->model->connectionName();
+            } else if ($modelUnit->model instanceof Model) {
+                $connectionNames[] = $modelUnit->model->getConnectionName();
+            }
         }
+
         $connectionNames = array_unique($connectionNames);
+
         $connections = [];
+
         foreach ($connectionNames as $connectionName) {
-            $connections[] = Db::connection($connectionName);
+            $connection = Db::connection($connectionName);
+            $connections[spl_object_id($connection)] = $connection;
         }
+
         return $connections;
     }
 
     /**
      * 开始事务
+     *
      * @author Verdient。
      */
-    public function beginTransaction()
+    public function beginTransaction(): void
     {
         foreach ($this->getConnections() as $connection) {
             $connection->beginTransaction();
@@ -92,9 +151,10 @@ class Models
 
     /**
      * 提交事务
+     *
      * @author Verdient。
      */
-    public function commit()
+    public function commit(): void
     {
         foreach ($this->getConnections() as $connection) {
             $connection->commit();
@@ -103,9 +163,10 @@ class Models
 
     /**
      * 回滚事务
+     *
      * @author Verdient。
      */
-    public function rollBack()
+    public function rollBack(): void
     {
         foreach ($this->getConnections() as $connection) {
             $connection->rollBack();
@@ -114,72 +175,93 @@ class Models
 
     /**
      * 批量执行方法
-     * @param string $method 要执行的方法
-     * @return bool
+     *
+     * @param Execution $execution 执行方法
+     *
      * @author Verdient。
      */
-    public function execute(string $method): bool
+    public function execute(Execution $execution): bool
     {
-        $isOK = true;
-        $count = $this->models;
+        $count = count($this->modelUnits);
 
         if ($count === 0) {
             return true;
         }
 
         if ($count === 1) {
-            foreach ($this->each() as $model) {
-                return (bool) call_user_func([$model, $method]);
+            $modelUnit = reset($this->modelUnits);
+            return $modelUnit->execute($modelUnit->execution ?: $execution);
+        }
+
+        if ($this->optimize) {
+            $optimizer = new ModelsOptimizer($this->modelUnits, $execution);
+
+            $actions = $optimizer->actions();
+
+            $modelUnits = $optimizer->modelUnits();
+
+            if (empty($actions) && empty($modelUnits)) {
+                return false;
             }
+        } else {
+            $actions = [];
+
+            $modelUnits = $this->modelUnits;
         }
 
         $this->beginTransaction();
+
         try {
-            foreach ($this->each() as $model) {
-                if (!call_user_func([$model, $method])) {
-                    $isOK = false;
-                    break;
+            foreach ($actions as $action) {
+                if (call_user_func($action) === false) {
+                    throw new RuntimeException('Models execute failed.');
                 }
             }
-            if ($isOK) {
-                $this->commit();
-            } else {
-                $this->rollBack();
+
+            reset($modelUnits);
+
+            foreach ($modelUnits as $modelUnit) {
+                if ($modelUnit->execute($modelUnit->execution ?: $execution) === false) {
+                    throw new RuntimeException('Models execute failed.');
+                }
             }
+
+            $this->commit();
         } catch (\Throwable $e) {
             $this->rollBack();
             throw $e;
         }
-        return $isOK;
+
+        return true;
     }
 
     /**
      * 保存
-     * @return bool
+     *
      * @author Verdient。
      */
     public function save(): bool
     {
-        return $this->execute('save');
+        return $this->execute(Execution::SAVE);
     }
 
     /**
      * 删除
-     * @return bool
+     *
      * @author Verdient。
      */
     public function delete(): bool
     {
-        return $this->execute('delete');
+        return $this->execute(Execution::DELETE);
     }
 
     /**
      * 强制删除
-     * @return bool
+     *
      * @author Verdient。
      */
     public function forceDelete(): bool
     {
-        return $this->execute('forceDelete');
+        return $this->execute(Execution::FORCE_DELETE);
     }
 }

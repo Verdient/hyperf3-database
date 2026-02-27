@@ -8,113 +8,141 @@ use Closure;
 use Hyperf\Codec\Json;
 use Hyperf\Contract\Arrayable;
 use Hyperf\Contract\Jsonable;
+use Hyperf\Coroutine\Parallel;
+use Hyperf\Database\Model\Collection;
+use Hyperf\Stringable\Str;
+use InvalidArgumentException;
+use Override;
+use Verdient\Hyperf3\Database\Builder\BuilderInterface;
+use Verdient\Hyperf3\Database\Builder\SoftDeleteBuilder;
+use Verdient\Hyperf3\Database\Model\DataSetInterface;
 
 /**
  * 数据提供器
+ *
+ * @template TModel
+ *
  * @author Verdient。
  */
 class DataProvider implements Arrayable, Jsonable
 {
     /**
      * 是否已构建
+     *
      * @author Verdient。
      */
     protected bool $isBuilded = false;
 
     /**
      * 序列化器
+     *
      * @author Verdient。
      */
     protected ?Closure $serializer = null;
 
     /**
      * 字段
+     *
      * @author Verdient。
      */
     protected array $columns = [];
 
     /**
      * 排序
+     *
      * @author Verdient。
      */
     protected array $sorts = [];
 
     /**
-     * 需要标签转译的字段
-     * @author Verdient。
-     */
-    protected array $labels = [];
-
-    /**
-     * @var array 别名
+     * 别名
+     *
      * @author Verdient。
      */
     protected array $alias = [];
 
     /**
      * 页码字段名称
+     *
      * @author Verdient。
      */
     protected string $pageName = 'page';
 
     /**
      * 分页大小字段名称
+     *
      * @author Verdient。
      */
-    protected string $pageSizeName = 'page_size';
+    protected string $pageSizeName = 'pageSize';
 
     /**
      * 默认页码
+     *
      * @author Verdinent。
      */
     protected int $defaultPage = 1;
 
     /**
      * 默认分页大小
+     *
      * @author Verdinent。
      */
     protected int $defaultPageSize = 50;
 
     /**
      * 总数
+     *
      * @author Verdient。
      */
     protected ?int $count = null;
 
     /**
      * 模型集合
+     *
      * @author Verdient。
      */
     protected ?Collection $models = null;
 
     /**
      * 附加的数据
+     *
      * @author Verdient。
      */
     protected array $appends = [];
 
     /**
      * 构造函数
-     * @param Builder $builder 查询构造器
+     *
+     * @template T
+     *
+     * @param BuilderInterface<T>|(BuilderInterface<T>&SoftDeleteBuilder<T>) $builder 查询构造器
      * @param ?DataFilter $filter 数据过滤器
+     *
      * @author Verdient。
      */
-    public function __construct(protected Builder $builder, protected ?DataFilter $filter = null) {}
+    public function __construct(protected BuilderInterface $builder, protected ?DataFilter $filter = null) {}
 
     /**
      * 创建新的数据提供器
-     * @param Builder $builder 查询构造器
+     *
+     * @template T
+     *
+     * @param BuilderInterface<T>|(BuilderInterface<T>&SoftDeleteBuilder<T>) $builder 查询构造器
      * @param ?DataFilter $filter 数据过滤器
+     *
+     * @return static<T>
      * @author Verdient。
      */
-    public static function create(Builder $builder, ?DataFilter $filter = null): static
+    public static function create(BuilderInterface $builder, ?DataFilter $filter = null): static
     {
         return new static($builder, $filter);
     }
 
     /**
      * 设置序列化器
-     * @param Closure $serializer 序列化器
+     *
+     * @param Closure(Collection<int,TModel>): array $serializer 序列化器
+     *
      * @author Verdient。
      */
     public function setSerializer(Closure $serializer): static
@@ -125,6 +153,7 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 获取序列化器
+     *
      * @author Verdient。
      */
     public function getSerializer(): ?Closure
@@ -132,9 +161,9 @@ class DataProvider implements Arrayable, Jsonable
         return $this->serializer;
     }
 
-
     /**
      * 获取字段
+     *
      * @author Verdient。
      */
     public function getColumns(): array
@@ -144,38 +173,32 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 设置字段
+     *
      * @param array $columns 字段
+     *
      * @author Verdient。
      */
     public function setColumns(array $columns): static
     {
+        foreach ($columns as $column) {
+            if (!is_string($column)) {
+                throw new InvalidArgumentException('The columns parameter of setColumns must be a string.');
+            }
+            if (str_contains($column, '.')) {
+                throw new InvalidArgumentException('The columns parameter of setColumns cannot contain ".".');
+            }
+        }
+
         $this->columns = $columns;
-        return $this;
-    }
 
-    /**
-     * 获取需要标签的字段
-     * @author Verdient。
-     */
-    public function getLabels(): array
-    {
-        return $this->labels;
-    }
-
-    /**
-     * 设置需要标签的字段
-     * @param array $columns 字段
-     * @author Verdient。
-     */
-    public function setLabels(array $columns): static
-    {
-        $this->labels = $columns;
         return $this;
     }
 
     /**
      * 设置默认页码
+     *
      * @param int $page 页码
+     *
      * @author Vertdient。
      */
     public function setDefaultPage(int $page): static
@@ -186,7 +209,9 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 设置默认分页大小
+     *
      * @param int $pageSize 分页大小
+     *
      * @author Vertdient。
      */
     public function setDefaultPageSize(int $pageSize): static
@@ -197,7 +222,9 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 设置页码字段名称
+     *
      * @param string $name 名称
+     *
      * @author Verdient。
      */
     public function setPageName(string $name): static
@@ -208,7 +235,9 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 设置分页大小字段名称
+     *
      * @param string $name 名称
+     *
      * @author Verdient。
      */
     public function setPageSizeName(string $name): static
@@ -219,7 +248,9 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 设置总数
+     *
      * @param int $count 总数
+     *
      * @author Vertdient。
      */
     public function setCount(int $count): static
@@ -230,6 +261,7 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 获取排序
+     *
      * @author Verdient。
      */
     public function getSorts(): array
@@ -239,7 +271,9 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 设置排序
+     *
      * @param array $sorts 排序
+     *
      * @author Verdient。
      */
     public function setSorts(array $sorts): static
@@ -250,8 +284,10 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 添加排序
+     *
      * @param string $column 字段
      * @param string $sort 排序方式
+     *
      * @author Verdient。
      */
     public function addSort(string $column, string $sort = 'desc'): static
@@ -262,6 +298,7 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 获取别名
+     *
      * @author Verdient。
      */
     public function getAlias(): array
@@ -271,7 +308,9 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 设置字段别名
+     *
      * @param array $alias 别名
+     *
      * @author Vertdient。
      */
     public function setAlias(array $alias): static
@@ -282,6 +321,7 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 获取附加的数据
+     *
      * @author Verdient。
      */
     public function getAppends(): array
@@ -291,7 +331,9 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 设置附加的数据
+     *
      * @param array $appends 附加的数据
+     *
      * @author Vertdient。
      */
     public function setAppends(array $appends): static
@@ -302,17 +344,20 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 获取构建器
+     *
+     * @return BuilderInterface<TModel>
      * @author Verdient。
      */
-    public function getBuilder(): Builder
+    public function getBuilder(): BuilderInterface
     {
         if ($this->isBuilded) {
             return $this->builder;
         }
         foreach ($this->getSorts() as $sort) {
-            $this
-                ->builder
-                ->orderBy($sort[0], $sort[1]);
+            match (strtolower($sort[1])) {
+                'asc' => $this->builder->orderByAsc($sort[0]),
+                'desc' => $this->builder->orderByDesc($sort[0])
+            };
         }
         if ($this->filter) {
             $this->builder = $this
@@ -325,14 +370,20 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 获取页码
-     * @return int
+     *
      * @author Verdient。
      */
     public function getPage(): int
     {
         if ($this->filter) {
             if ($page = $this->filter->getQuery($this->pageName)) {
-                return intval($page);
+                return (int) $page;
+            }
+            if ($page = $this->filter->getQuery(Str::snake($this->pageName))) {
+                return (int) $page;
+            }
+            if ($page = $this->filter->getQuery(Str::camel($this->pageName))) {
+                return (int) $page;
             }
         }
         return $this->defaultPage;
@@ -340,14 +391,20 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 获取分页大小
-     * @return int
+     *
      * @author Verdient。
      */
     public function getPageSize(): int
     {
         if ($this->filter) {
             if ($pageSize = $this->filter->getQuery($this->pageSizeName)) {
-                return intval($pageSize);
+                return (int) $pageSize;
+            }
+            if ($pageSize = $this->filter->getQuery(Str::snake($this->pageSizeName))) {
+                return (int) $pageSize;
+            }
+            if ($pageSize = $this->filter->getQuery(Str::camel($this->pageSizeName))) {
+                return (int) $pageSize;
             }
         }
         return $this->defaultPageSize;
@@ -355,57 +412,36 @@ class DataProvider implements Arrayable, Jsonable
 
     /**
      * 获取模型集合
-     * @return Collection
+     *
+     * @return Collection<int,TModel>
      * @author Verdient。
      */
-    protected function getModels()
+    protected function getModels(): Collection
     {
         if ($this->models === null) {
-            $builder = $this->getBuilder();
-            if ($this->getCount() > 0) {
-                $columns = $this->getColumns();
-                if (!empty($columns)) {
-                    $builder->select($columns);
-                }
-                $this->models = $builder
-                    ->forPage($this->getPage(), $this->getPageSize())
-                    ->get();
-            } else {
-                $this->models = new Collection();
-            }
+            $columns = $this->getColumns();
+            $offset = ($this->getPage() - 1) * $this->getPageSize();
+            $this->models = $this->getBuilder()
+                ->limit($this->getPageSize())
+                ->offset($offset > 0 ? $offset : 0)
+                ->get(empty($columns) ? ['*'] : $columns);
         }
         return $this->models;
     }
 
     /**
-     * 获取总数
+     * 将模型集合转换为行数据
+     *
+     * @param Collection $models 模型集合
+     *
      * @author Verdient。
      */
-    protected function getCount(): int
+    protected function toRows(Collection $models): array
     {
-        if ($this->count === null) {
-            $builder = $this->getBuilder();
-            if ($this->filter && $this->filter->getIsNeedless()) {
-                $this->count = 0;
-            } else {
-                $this->count = $builder
-                    ->toBase()
-                    ->getCountForPagination();
-            }
-        }
-        return $this->count;
-    }
-
-    /**
-     * 获取条目
-     * @author Verdient。
-     */
-    public function getRows(): array
-    {
-        $models = $this->getModels();
         if ($models->isEmpty()) {
             return [];
         }
+
         if (is_callable($this->serializer)) {
             $rows = call_user_func($this->serializer, $models);
             if (!is_array($rows) && $rows instanceof Arrayable) {
@@ -413,59 +449,84 @@ class DataProvider implements Arrayable, Jsonable
             }
             return $rows;
         }
+
         $result = [];
         $alias = $this->alias;
-        $labels = $this->labels;
+
         foreach ($models->all() as $model) {
-            $row = $model->toArray();
-            foreach ($labels as $name) {
-                if (!isset($row[$name])) {
-                    continue;
+            if ($model instanceof DataSetInterface) {
+                $row = $model->toDataSet([], $alias);
+            } else {
+                $row = $model->toArray();
+                if (!empty($alias)) {
+                    $row = array_combine(array_map(function ($key) use ($alias) {
+                        return $alias[$key] ?? $key;
+                    }, array_keys($row)), array_values($row));
                 }
-                if (method_exists($model, 'interpret')) {
-                    $label = $model->interpret($name);
-                } else {
-                    $label = null;
-                }
-                $keys = array_keys($row);
-                $index = array_search($name, $keys) + 1;
-                $keys = [...array_slice($keys, 0, $index), $name . '_label', ...array_slice($keys, $index)];
-                $values = array_values($row);
-                $values = [...array_slice($values, 0, $index), $label, ...array_slice($values, $index)];
-                $row = array_combine($keys, $values);
             }
-            if (!empty($alias)) {
-                $row = array_combine(array_map(function ($key) use ($alias) {
-                    return $alias[$key] ?? $key;
-                }, array_keys($row)), array_values($row));
-            }
+
             $result[] = $row;
         }
         return $result;
     }
 
     /**
-     * 获取最后的页码
-     * @return int
+     * 获取总数
+     *
      * @author Verdient。
      */
-    public function getLastPage()
+    public function getCount(): int
+    {
+        if ($this->count === null) {
+            if ($this->filter && $this->filter->getIsNeedless()) {
+                $this->count = 0;
+            } else {
+                $this->count = $this->getBuilder()->cloneWithout([])->count();
+            }
+        }
+        return $this->count;
+    }
+
+    /**
+     * 获取条目
+     *
+     * @author Verdient。
+     */
+    public function getRows(): array
+    {
+        return $this->toRows($this->getModels());
+    }
+
+    /**
+     * 获取最后的页码
+     *
+     * @author Verdient。
+     */
+    public function getLastPage(): int
     {
         return (int) ceil($this->getCount() / $this->getPageSize());
     }
 
     /**
-     * @inheritdoc
      * @author Verdient。
      */
+    #[Override]
     public function toArray(): array
     {
+        $parallel = new Parallel;
+
+        $parallel->add(fn() => $this->getModels());
+
+        $parallel->add(fn() => $this->getCount());
+
+        [$models, $count] = $parallel->wait();
+
         $result = [
             'page' => $this->getPage(),
             'page_size' => $this->getPageSize(),
             'last_page' => $this->getLastPage(),
-            'count' => $this->getCount(),
-            'rows' => $this->getRows()
+            'count' => $count,
+            'rows' => $this->toRows($models)
         ];
 
         if (!empty($this->appends)) {
@@ -480,9 +541,9 @@ class DataProvider implements Arrayable, Jsonable
     }
 
     /**
-     * @inheritdoc
      * @author Verdient。
      */
+    #[Override]
     public function __toString(): string
     {
         return Json::encode($this->toArray());

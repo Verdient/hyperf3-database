@@ -2,19 +2,32 @@
     "name": "verdient/hyperf3-database",
     "type": "library",
     "require": {
+        "doctrine/dbal": "^4.4",
         "hyperf/codec": "^3.1",
         "hyperf/collection": "^3.1",
+        "hyperf/command": "^3.1",
         "hyperf/config": "^3.1",
+        "hyperf/contract": "^3.1",
+        "hyperf/coroutine": "^3.1",
         "hyperf/database": "^3.1",
+        "hyperf/database-pgsql": "^3.1",
         "hyperf/db-connection": "^3.1",
+        "hyperf/di": "^3.1",
         "hyperf/event": "^3.1",
         "hyperf/logger": "^3.1",
         "hyperf/stringable": "^3.1",
+        "hyperf/support": "^3.1",
+        "nikic/php-parser": "^4.19",
+        "phpdocumentor/reflection-docblock": "^6.0",
+        "phpmyadmin/sql-parser": "^5.11",
         "psr/container": "^2.0",
         "psr/log": "^3.0",
-        "verdient/cli": "^0.0",
-        "hyperf/contract": "^3.1",
-        "hyperf/constants": "^3.1"
+        "verdient/cli": "^1.0",
+        "verdient/hyperf3-enum": "^2.0",
+        "verdient/hyperf3-watcher": "^2.0"
+    },
+    "require-dev": {
+        "swoole/ide-helper": "^6.0"
     },
     "autoload": {
         "psr-4": {
@@ -25,5 +38,8 @@
         "hyperf": {
             "config": "Verdient\\Hyperf3\\Database\\ConfigProvider"
         }
+    },
+    "config": {
+        "sort-packages": true
     }
 }

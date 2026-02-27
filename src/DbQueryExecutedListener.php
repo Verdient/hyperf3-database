@@ -4,11 +4,18 @@ declare(strict_types=1);
 
 namespace Verdient\Hyperf3\Database;
 
+use DateTime;
 use Hyperf\Collection\Arr;
 use Hyperf\Database\Events\QueryExecuted;
 use Hyperf\Event\Contract\ListenerInterface;
 use Hyperf\Logger\LoggerFactory;
 use Hyperf\Stringable\Str;
+use Override;
+use PhpMyAdmin\SqlParser\Parser;
+use PhpMyAdmin\SqlParser\Statements\DeleteStatement;
+use PhpMyAdmin\SqlParser\Statements\InsertStatement;
+use PhpMyAdmin\SqlParser\Statements\SelectStatement;
+use PhpMyAdmin\SqlParser\Statements\UpdateStatement;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Verdient\cli\Console;
@@ -17,61 +24,79 @@ use function Hyperf\Config\config;
 
 /**
  * 数据库查询执行监听器
+ *
  * @author Verdient。
  */
 class DbQueryExecutedListener implements ListenerInterface
 {
     /**
+     * 记录器
+     *
      * @author Verdient。
      */
     protected LoggerInterface $logger;
 
     /**
-     * @var array 忽略的前缀
+     * 忽略的数据库
+     *
      * @author Verdient。
      */
-    protected $ignorePrefixes = [
-        'SELECT `column_name`, `column_default`, `is_nullable`, `column_type`, `column_comment` FROM `information_schema`.`columns` WHERE `table_schema` = ',
-        'SELECT `COLUMN_NAME`, `COLUMN_DEFAULT`, `IS_NULLABLE`, `COLUMN_TYPE`, `COLUMN_COMMENT` FROM `information_schema`.`COLUMNS` WHERE `TABLE_SCHEMA` = ',
-        'SHOW'
-    ];
+    protected array $ignoreDatabases = [];
 
     /**
-     * @var bool 是否打印SQL
+     * 忽略的表
+     *
      * @author Verdient。
      */
-    protected $printSql = false;
+    protected array $ignoreTables = [];
 
     /**
-     * @var bool 是否将SQL记录到日志
+     * 是否打印SQL
+     *
      * @author Verdient。
      */
-    protected $logSql = false;
+    protected bool $printSql = false;
 
     /**
-     * @var bool 是否启用
+     * 是否将SQL记录到日志
+     *
      * @author Verdient。
      */
-    protected $isEnabled = false;
+    protected bool $logSql = false;
 
     /**
-     * @inheritdoc
+     * 是否启用
+     *
+     * @author Verdient。
+     */
+    protected bool $isEnabled = false;
+
+    /**
+     * 构造函数
+     *
      * @author Verdient。
      */
     public function __construct(ContainerInterface $container)
     {
-        $this->printSql = config('print_sql');
-        $this->logSql = config('log_sql');
+        $this->printSql = config('dev.sql.print', false);
+
+        $this->logSql = config('dev.sql.log', false);
+
+        $this->ignoreDatabases = config('dev.sql.ignore.databases', []);
+
+        $this->ignoreTables = config('dev.sql.ignore.tables', []);
+
         if ($this->logSql) {
             $this->logger = $container->get(LoggerFactory::class)->get('sql', 'sql');
         }
+
         $this->isEnabled = $this->printSql || $this->logSql;
     }
 
     /**
-     * @inheritdoc
      * @author Verdient。
      */
+    #[Override]
     public function listen(): array
     {
         return [
@@ -81,57 +106,106 @@ class DbQueryExecutedListener implements ListenerInterface
 
     /**
      * @param QueryExecuted $event
+     *
      * @author Verdient。
      */
+    #[Override]
     public function process($event): void
     {
-        if ($event instanceof QueryExecuted) {
-            if ($this->isEnabled && !$this->isIgnore($event->sql)) {
-                $sql = $event->sql;
-                if (!Arr::isAssoc($event->bindings)) {
-                    $placeholder = md5(random_bytes(64));
-                    foreach ($event->bindings as $value) {
-                        if (is_null($value)) {
-                            $value = 'null';
-                        } else if (is_int($value) || is_float($value)) {
-                            $value = (string) $value;
-                        } else if (is_bool($value)) {
-                            $value = $value ? 'true' : 'false';
-                        } else {
-                            $value = "'" . str_replace('?', $placeholder, (string) $value) . "'";
-                        }
-                        $sql = Str::replaceFirst('?', $value, $sql);
-                    }
-                    $sql = str_replace($placeholder, '?', $sql);
-                }
-                if ($this->printSql) {
-                    Console::output(implode(' ', [
-                        date('Y-m-d H:i:s'),
-                        Console::colour('[' . $event->time . ' ms]', Console::FG_YELLOW),
-                        Console::colour($event->connectionName, Console::FG_GREEN),
-                        Console::colour($sql, Console::FG_BLUE)
-                    ]));
-                }
-                if ($this->logSql) {
-                    $this->logger->info(sprintf('[%s ms] %s %s', $event->time, $event->connectionName, $sql));
-                }
+        if (!$this->isEnabled) {
+            return;
+        }
+
+        if (!($event instanceof QueryExecuted)) {
+            return;
+        }
+
+        $sql = $event->sql;
+
+        $parser = new Parser($sql);
+
+        if (!isset($parser->statements[0])) {
+            return;
+        }
+
+        $statement = $parser->statements[0];
+
+        $database = null;
+
+        $table = null;
+
+        if ($statement instanceof SelectStatement) {
+            if (isset($statement->from[0])) {
+                $expression = $statement->from[0];
+                $database = $expression ? $expression->database : null;
+                $table = $expression ? $expression->table : null;
             }
+        } else if ($statement instanceof InsertStatement) {
+            if ($intoKeyword = $statement->into) {
+                $database = $intoKeyword->dest->database;
+                $table = $intoKeyword->dest->table;
+            }
+        } else if ($statement instanceof UpdateStatement) {
+            if (isset($statement->tables[0])) {
+                $setOperation = $statement->tables[0];
+                $database = $setOperation->database;
+                $table = $setOperation->table;
+            }
+        } else if ($statement instanceof DeleteStatement) {
+            if (isset($statement->from[0])) {
+                $expression = $statement->from[0];
+                $database = $expression->database;
+                $table = $expression->table;
+            }
+        }
+
+        if ($this->shouldIgnore($database, $table)) {
+            return;
+        }
+
+        if (!Arr::isAssoc($event->bindings)) {
+            $placeholder = md5(random_bytes(64));
+            foreach ($event->bindings as $value) {
+                if (is_null($value)) {
+                    $value = 'null';
+                } else if (is_numeric($value)) {
+                    $value = (string) $value;
+                } else if (is_bool($value)) {
+                    $value = $value ? 'true' : 'false';
+                } else {
+                    $value = "'" . str_replace('?', $placeholder, (string) $value) . "'";
+                }
+                $sql = Str::replaceFirst('?', $value, $sql);
+            }
+            $sql = str_replace($placeholder, '?', $sql);
+        }
+
+        if ($this->printSql) {
+            $dateTime = new DateTime('now');
+            Console::output(Console::colour(implode(' ', [
+                Console::colour($dateTime->format('Y-m-d H:i:s'), Console::FG_YELLOW),
+                Console::colour('[' . $event->time . ' ms]', Console::FG_YELLOW, Console::BOLD),
+                Console::colour('[' . $event->connectionName . ']', Console::FG_GREEN),
+                Console::colour($sql, Console::FG_BLUE)
+            ])));
+        }
+
+        if ($this->logSql) {
+            $this->logger->info(sprintf('[%s ms] [%s] %s', $event->time, $event->connectionName, $sql));
         }
     }
 
     /**
      * 判断是否应该忽略
-     * @param string $sql SQL语句
-     * @return bool
+     *
+     * @param ?string $database 数据库名称
+     * @param ?string $table 表名称
+     *
      * @author Verdient。
      */
-    protected function isIgnore($sql): bool
+    protected function shouldIgnore(?string $database, ?string $table): bool
     {
-        foreach ($this->ignorePrefixes as $prefix) {
-            if (substr($sql, 0, strlen($prefix)) === $prefix) {
-                return true;
-            }
-        }
-        return false;
+        return (empty($database) && empty($table))
+            || in_array($database, $this->ignoreDatabases, true) || in_array($table, $this->ignoreTables, true);
     }
 }
