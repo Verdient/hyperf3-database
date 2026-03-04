@@ -4,140 +4,70 @@ declare(strict_types=1);
 
 namespace Verdient\Hyperf3\Database;
 
-use Closure;
 use Hyperf\Contract\Arrayable;
-use Hyperf\Database\Model\Builder as ModelBuilder;
-use Hyperf\Database\Query\Builder as QueryBuilder;
-use Iterator;
+use Hyperf\Stringable\Str;
+use Override;
+use Verdient\Hyperf3\Database\Builder\Builder as BuilderBuilder;
+use Verdient\Hyperf3\Database\Model\ModelInterface;
+use Verdient\Hyperf3\Database\Model\Property;
 
 /**
- * @inheritdoc
- * @method AbstractModel|null first(array|string $columns)
- * @method Collection get(array|string $columns)
- * @method static withTrashed(bool $withTrashed = true)
- * @method static onlyTrashed()
- * @method static withoutTrashed()
- * @method bool exists()
- * @method static select(array|mixed $columns = ['*'])
- * @method static whereNull(array|string $columns, string $boolean = 'and', bool $not = false)
- * @method static whereNotNull(string $column, string $boolean = 'and')
- * @method static lockForUpdate()
- * @method static inRandomOrder(string $seed = '')
- * @method static limit(int $value)
- * @method static offset(int $value)
- * @method static orderBy(string $column, string $direction = 'asc')
- * @method static orderByDesc(string $column)
- * @method static take(int $value)
- * @method static whereColumn(array|string $first, null|string $operator = null, null|string string $second = null, string $boolean = 'and')
- * @method static whereExists(Closure $callback, $boolean = 'and', $not = false)
- * @method static whereNotExists(Closure $callback, $boolean = 'and')
- * @method static whereBetween(string $column, array $values, string $boolean = 'and', bool $not = false)
- * @method static whereNotBetween(string $column, array $values, string $boolean = 'and')
- * @method static whereJsonContains(string $column, mixed $value, string $boolean = 'and', bool $not = false)
- * @method static whereJsonDoesntContain(string $column, mixed $value, string $boolean = 'and')
- * @method static orWhereJsonContains(string $column, mixed $value)
- * @method static orWhereJsonDoesntContain(string $column, mixed $value)
- * @method static whereJsonLength(string $column, mixed $operator, null|mixed $value = null, string $boolean = 'and')
- * @method static orWhereJsonLength(string $column, mixed $operator, null|mixed $value = null)
- * @method static whereRaw(string $sql, mixed $bindings = [], string $boolean = 'and')
- * @method static whereRowValues(array $columns, string $operator, array $values, string $boolean = 'and')
- * @method static having(string $column, null|string $operator = null, null|string $value = null, string $boolean = 'and')
- * @method static groupBy(...$groups)
- * @method int count(string $columns = '*')
- * @method int min(string $column)
- * @method int max(string $column)
- * @method int sum(string $column)
- * @method int avg(string $column)
- * @method int average(string $column)
- * @method static distinct()
- * @method static useWritePdo()
- * @method static forceIndexes(array $forceIndexes)
- * @method static forPage(int $page, int $perPage = 15)
+ * 查询构造器
+ *
+ * @template TModel of ModelInterface
+ * @template TRelationBuilders of array
+ *
+ * @extends BuilderBuilder<TModel,TRelationBuilders>
+ * @implements BuilderInterface<TModel,TRelationBuilders>
+ *
  * @author Verdient。
  */
-class Builder extends ModelBuilder
+class Builder extends BuilderBuilder
 {
     /**
-     * In条件
-     * @param string $column 字段
-     * @param array|Arrayable|QueryBuilder|ModelBuilder|Closure $values 值
-     * @param string $boolean 连接关系
-     * @param bool $not 是否是NOT
-     * @return static
      * @author Verdient。
      */
-    public function whereIn(string $column, array|Arrayable|QueryBuilder|ModelBuilder|Closure $values, string $boolean = 'and', bool $not = false)
+    #[Override]
+    protected function resolveProperty(string $name, ?string $modelClass = null): ?Property
     {
-        if ($values instanceof QueryBuilder || $values instanceof ModelBuilder || $values instanceof Closure) {
-            parent::whereIn($column, $values, $boolean, $not);
-        } else {
-            if ($values instanceof Arrayable) {
-                $values = $values->toArray();
-            }
-            $values = array_unique($values);
-            if (count($values) === 1) {
-                $operator = $not ? '!=' : '=';
-                parent::where($column, $operator, reset($values), $boolean);
+        if (!$property = parent::resolveProperty($name, $modelClass)) {
+            return parent::resolveProperty(Str::camel($name), $modelClass);
+        }
+
+        return $property;
+    }
+
+    /**
+     * 格式化属性名称
+     *
+     * @param string[] $propertyNames 属性名称集合
+     *
+     * @author Verdient。
+     */
+    protected function normalizePropertyNames(array $propertyNames): array
+    {
+        foreach ($propertyNames as &$propertyName) {
+            if (is_array($propertyName)) {
+                $propertyName = $this->normalizePropertyNames($propertyName);
             } else {
-                parent::whereIn($column, $values, $boolean, $not);
+                $propertyName = $this->resolveProperty($propertyName)->name;
             }
         }
-        return $this;
+
+        return $propertyNames;
     }
 
     /**
-     * NotIn条件
-     * @param string $column 字段
-     * @param array|Arrayable|QueryBuilder|ModelBuilder|Closure $values 值
-     * @param string $boolean 连接关系
-     * @return static
      * @author Verdient。
      */
-    public function whereNotIn(string $column, array|Arrayable|QueryBuilder|ModelBuilder|Closure $values, string $boolean = 'and', bool $not = false)
+    #[Override]
+    protected function whereInCompositeInternal(array $propertyNames, array|Arrayable $values, string $boolean = 'and', bool $not = false): static
     {
-        return $this->whereIn($column, $values, $boolean, true);
-    }
-
-    /**
-     * 补充表名称
-     * @param array|string 字段名称
-     * @return array|string
-     * @author Verdient。
-     */
-    public function supplementTableName($field)
-    {
-        if (is_string($field)) {
-            return $this->getModel()->qualifyColumn($field);
-        }
-        if (is_array($field)) {
-            return array_map(function ($column) {
-                return $this->supplementTableName($column);
-            }, $field);
-        }
-        return $field;
-    }
-
-    /**
-     * 批量迭代
-     * @param int $size 分批大小
-     * @return Iterator
-     * @author Verdient。
-     */
-    public function batch(int $size = 500): Iterator
-    {
-        $rows = [];
-        $i = 0;
-        foreach ($this->cursor() as $row) {
-            $i++;
-            $rows[] = $row;
-            if ($i === $size) {
-                yield $rows;
-                $i = 0;
-                $rows = [];
-            }
-        }
-        if (!empty($rows)) {
-            yield $rows;
-        }
+        return parent::whereInCompositeInternal(
+            $this->normalizePropertyNames($propertyNames),
+            $values,
+            $boolean,
+            $not
+        );
     }
 }
