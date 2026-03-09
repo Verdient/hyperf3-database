@@ -403,7 +403,6 @@ abstract class AbstractModel implements ModelInterface, IteratorAggregate
                 $relation = $attributes->get(Relation::class)->first();
             }
 
-
             if ($column === null && enum_exists($type->getName())) {
                 $column = Utils::transformEnumToColumn($type->getName());
             }
@@ -476,6 +475,14 @@ abstract class AbstractModel implements ModelInterface, IteratorAggregate
 
             if (!$column && !$isRelation) {
                 throw new TypeError($propertyPrompt . ' cannot be inferred as a mapped attribute. If you want to define an attribute that is only used within the class, use a modifier other than public.');
+            }
+
+            if (
+                $primaryKey
+                && $primaryKey->autoIncrement
+                && $generator === null
+            ) {
+                $generator = new AutoIncrementGenerator();
             }
 
             $property = new Property(
