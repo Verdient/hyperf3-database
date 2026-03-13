@@ -71,12 +71,14 @@ class Utils
 
         if ($autoIncrement && $primaryKeyValue === null) {
             $primaryKeyValue = $primaryKey->property->deserialize($model->query()
+                ->disablePropertyCompletion()
                 ->toBase()
                 ->insertGetId(static::serialize($modelClass, $data)));
             $data[$primaryKeyName] = $primaryKeyValue;
             $model->setAttribute($primaryKeyName, $primaryKeyValue);
         } else {
             $model->query()
+                ->disablePropertyCompletion()
                 ->toBase()
                 ->insert(static::serialize($modelClass, $data));
         }
@@ -137,6 +139,7 @@ class Utils
 
         if (
             $query
+            ->disablePropertyCompletion()
             ->where(
                 $primaryKeyName,
                 '=',

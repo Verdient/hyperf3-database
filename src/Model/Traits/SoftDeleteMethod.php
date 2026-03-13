@@ -87,6 +87,7 @@ trait SoftDeleteMethod
         }
 
         $affectedRows = $builder
+            ->disablePropertyCompletion()
             ->toBase()
             ->update($values);
 
@@ -195,6 +196,7 @@ trait SoftDeleteMethod
         }
 
         $affectedRows = $builder
+            ->disablePropertyCompletion()
             ->toBase()
             ->update($values);
 
@@ -248,6 +250,7 @@ trait SoftDeleteMethod
         }
 
         $affectedRows = $builder
+            ->disablePropertyCompletion()
             ->toBase()
             ->delete();
 

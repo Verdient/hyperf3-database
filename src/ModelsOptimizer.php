@@ -379,6 +379,7 @@ class ModelsOptimizer
                 [
                     (function () use ($builder, $conditionNames, $conditionValues) {
                         $builder
+                            ->disablePropertyCompletion()
                             ->whereInTuple($conditionNames, $conditionValues)
                             ->toBase()
                             ->delete();
@@ -496,6 +497,7 @@ class ModelsOptimizer
                         (function () use ($builder, $conditionNames, $conditionValues, $values, $count) {
 
                             $affectedRowsCount = $builder
+                                ->disablePropertyCompletion()
                                 ->whereInTuple($conditionNames, $conditionValues)
                                 ->toBase()
                                 ->update($values);
@@ -566,7 +568,10 @@ class ModelsOptimizer
                 })->bindTo(null);
             }
 
-            $builder = $this->getBuilder($modelClass)->toBase();
+            $builder = $this
+                ->getBuilder($modelClass)
+                ->disablePropertyCompletion()
+                ->toBase();
 
             foreach (
                 [

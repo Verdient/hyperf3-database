@@ -108,7 +108,9 @@ class Where extends AbstractStatement
 
             $callback($builder2);
 
-            $query2 = $builder2->toBase();
+            $query2 = $builder2
+                ->disablePropertyCompletion()
+                ->toBase();
 
             $arguments[0] = (function (QueryBuilder $query) use ($query2) {
                 $query->wheres = $query2->wheres;

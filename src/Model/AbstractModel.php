@@ -307,6 +307,7 @@ abstract class AbstractModel implements ModelInterface, IteratorAggregate
         }
 
         $affectedRows = $builder
+            ->disablePropertyCompletion()
             ->toBase()
             ->delete();
 
