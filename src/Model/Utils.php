@@ -45,42 +45,49 @@ class Utils
 
         $definition = DefinitionManager::get($modelClass);
 
-        if (!$primaryKey = $definition
-            ->primaryKeys
-            ->first()) {
-            throw new TypeError('Model ' . $modelClass  . ' has no primary key defined.');
-        }
-
         foreach ($definition->properties->all() as $property) {
             if ($property->modifier) {
                 $property->modifier->modify($model, $property);
             }
         }
 
-        $primaryKeyName = $primaryKey->property->name;
+        $primaryKeys = $definition->primaryKeys->all();
 
-        $primaryKeyValue = $primaryKey->property->getValue($model);
+        $primaryKeysCount = count($primaryKeys);
 
-        $autoIncrement = $primaryKey->autoIncrement;
+        $autoIncrementPrimaryKey = null;
 
-        if (!$autoIncrement && $primaryKeyValue === null) {
-            throw new RuntimeException('The value of primary key ' . $primaryKeyName . ' in the model ' . $modelClass . ' cannot be null.');
+        foreach ($primaryKeys as $primaryKey) {
+            if ($primaryKey->autoIncrement) {
+                if ($primaryKeysCount > 1) {
+                    throw new RuntimeException("Model $modelClass with composite keys cannot use auto-increment.");
+                }
+                $autoIncrementPrimaryKey = $primaryKey;
+            } else {
+                if ($primaryKey->property->getValue($model) === null) {
+                    throw new RuntimeException('The value of primary key ' . $primaryKey->property->name . ' in the model ' . $modelClass . ' cannot be null.');
+                }
+            }
         }
 
         $data = $model->getAttributes();
 
-        if ($autoIncrement && $primaryKeyValue === null) {
-            $primaryKeyValue = $primaryKey->property->deserialize($model->query()
-                ->disablePropertyCompletion()
-                ->toBase()
-                ->insertGetId(static::serialize($modelClass, $data)));
-            $data[$primaryKeyName] = $primaryKeyValue;
-            $model->setAttribute($primaryKeyName, $primaryKeyValue);
+        $serializedData = static::serialize($modelClass, $data);
+
+        $query = $model
+            ->query()
+            ->disablePropertyCompletion()
+            ->toBase();
+
+        if ($autoIncrementPrimaryKey && $autoIncrementPrimaryKey->property->getValue($model) === null) {
+            $autoIncrementPrimaryKeyValue = $autoIncrementPrimaryKey
+                ->property
+                ->deserialize($query->insertGetId($serializedData));
+            $autoIncrementPrimaryKeyName = $autoIncrementPrimaryKey->property->name;
+            $data[$autoIncrementPrimaryKeyName] = $autoIncrementPrimaryKeyValue;
+            $model->setAttribute($autoIncrementPrimaryKeyName, $autoIncrementPrimaryKeyValue);
         } else {
-            $model->query()
-                ->disablePropertyCompletion()
-                ->toBase()
-                ->insert(static::serialize($modelClass, $data));
+            $query->insert($serializedData);
         }
 
         $model->setOriginals($data);
@@ -101,18 +108,8 @@ class Utils
 
         $definition = DefinitionManager::get($modelClass);
 
-        if (!$primaryKey = $definition
-            ->primaryKeys
-            ->first()) {
+        if ($definition->primaryKeys->isEmpty()) {
             throw new TypeError('Model ' . $modelClass  . ' has no primary key defined.');
-        }
-
-        $primaryKeyName = $primaryKey->property->name;
-
-        $primaryKeyValue = $primaryKey->property->getValue($model);
-
-        if ($primaryKeyValue === null) {
-            throw new RuntimeException('The value of primary key ' . $primaryKeyName . ' of model ' . $modelClass . ' cannot be null.');
         }
 
         $dirty = $model->getDirty();
@@ -137,16 +134,29 @@ class Utils
             $query->withTrashed();
         }
 
-        if (
-            $query
-            ->disablePropertyCompletion()
-            ->where(
+        $builder = $query
+            ->disablePropertyCompletion();
+
+        foreach ($definition->primaryKeys->all() as $primaryKey) {
+            $primaryKeyName = $primaryKey->property->name;
+
+            $primaryKeyValue = $primaryKey->property->getValue($model);
+
+            if ($primaryKeyValue === null) {
+                throw new RuntimeException('The value of primary key ' . $primaryKeyName . ' of model ' . $modelClass . ' cannot be null.');
+            }
+
+            $builder->where(
                 $primaryKeyName,
                 '=',
                 $primaryKey
                     ->property
                     ->serialize($primaryKeyValue)
-            )
+            );
+        }
+
+        if (
+            $builder
             ->toBase()
             ->update(static::serialize($modelClass, $dirty)) === 1
         ) {
