@@ -15,6 +15,7 @@
         "hyperf/di": "^3.1",
         "hyperf/event": "^3.1",
         "hyperf/logger": "^3.1",
+        "hyperf/snowflake": "^3.1",
         "hyperf/stringable": "^3.1",
         "hyperf/support": "^3.1",
         "nikic/php-parser": "^4.19",

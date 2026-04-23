@@ -663,6 +663,12 @@ class Utils
     {
         $primaryKey = Utils::primaryKeyForGenerate($model::class, $propertyName);
 
+        $value = $primaryKey->property->getValue($model);
+
+        if ($value !== null) {
+            return $value;
+        }
+
         if ($primaryKey->property->modifier) {
             $primaryKey->property->modifier->modify($model, $primaryKey->property);
         } else {

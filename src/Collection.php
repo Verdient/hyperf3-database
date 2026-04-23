@@ -17,6 +17,8 @@ use function Hyperf\Collection\data_get;
  * @template TModel of ModelInterface
  * @extends ModelCollection<TKey, TModel>
  *
+ * @method groupBy(array|(callable(TModel, TKey): array-key)|string $groupBy): static
+ *
  * @author Verdient。
  */
 class Collection extends ModelCollection

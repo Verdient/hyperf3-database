@@ -97,7 +97,7 @@ class Models
     /**
      * 逐一迭代
      *
-     * @return Generator<ModelUnit>
+     * @return Generator<int,ModelUnit>
      * @author Verdient。
      */
     public function each(): Generator

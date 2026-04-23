@@ -14,8 +14,10 @@ use ReflectionEnum;
 use ReflectionProperty;
 use TypeError;
 use UnitEnum;
+use Verdient\Hyperf3\Database\Model\Annotation\DateTime as AnnotationDateTime;
 use Verdient\Hyperf3\Database\Model\Annotation\Json;
 use Verdient\Hyperf3\Database\Model\Annotation\Relation;
+use Verdient\Hyperf3\Database\Model\Annotation\Timestamp;
 use Verdient\Hyperf3\Database\Model\ColumnInterface;
 
 /**
@@ -121,7 +123,7 @@ class Property
 
         $this->isJson = $type === 'array' && $column instanceof Json;
 
-        $this->isDateTime = $attributes->has(DateTimeInterface::class);
+        $this->isDateTime = $attributes->has(DateTimeInterface::class) || $column instanceof AnnotationDateTime || $column instanceof Timestamp;
 
         $this->isBitMap = $type === BitMap::class || is_subclass_of($type, BitMap::class);
     }
@@ -296,16 +298,14 @@ class Property
             ->get(DateTimeInterface::class);
 
         if ($attributes->isEmpty()) {
-            throw new TypeError('The attribute ' . $this->modelClass . '::$' . $this->name . ' has no definition for DateTimeInterface.');
+            $value = $value->format('Y-m-d H:i:s');
+        } else {
+            if ($attributes->count() > 1) {
+                throw new TypeError('The attribute ' . $this->modelClass . '::$' . $this->name . ' has multiple definitions for DateTimeInterface.');
+            }
+
+            $value = $value->format($attributes->first()->format());
         }
-
-        if ($attributes->count() > 1) {
-            throw new TypeError('The attribute ' . $this->modelClass . '::$' . $this->name . ' has multiple definitions for DateTimeInterface.');
-        }
-
-        $attribute = $attributes->first();
-
-        $value = $value->format($attribute->format());
 
         return match ($this->type) {
             'int' => (int) $value,
@@ -430,16 +430,14 @@ class Property
             ->get(DateTimeInterface::class);
 
         if ($attributes->isEmpty()) {
-            throw new TypeError('The attribute ' . $this->modelClass . '::$' . $this->name . ' has no definition for DateTimeInterface.');
-        }
+            $value = $value->format('Y-m-d H:i:s');
+        } else {
+            if ($attributes->count() > 1) {
+                throw new TypeError('The attribute ' . $this->modelClass . '::$' . $this->name . ' has multiple definitions for DateTimeInterface.');
+            }
 
-        if ($attributes->count() > 1) {
-            throw new TypeError('The attribute ' . $this->modelClass . '::$' . $this->name . ' has multiple definitions for DateTimeInterface.');
-        }
-
-        $attribute = $attributes->first();
-
-        $value = $value->format($attribute->format());
+            $value = $value->format($attributes->first()->format());
+        };
 
         return match ($this->type) {
             'int' => (int) $value,
