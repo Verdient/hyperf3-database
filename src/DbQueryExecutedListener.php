@@ -122,42 +122,7 @@ class DbQueryExecutedListener implements ListenerInterface
 
         $sql = $event->sql;
 
-        $parser = new Parser($sql);
-
-        if (!isset($parser->statements[0])) {
-            return;
-        }
-
-        $statement = $parser->statements[0];
-
-        $database = null;
-
-        $table = null;
-
-        if ($statement instanceof SelectStatement) {
-            if (isset($statement->from[0])) {
-                $expression = $statement->from[0];
-                $database = $expression ? $expression->database : null;
-                $table = $expression ? $expression->table : null;
-            }
-        } else if ($statement instanceof InsertStatement) {
-            if ($intoKeyword = $statement->into) {
-                $database = $intoKeyword->dest->database;
-                $table = $intoKeyword->dest->table;
-            }
-        } else if ($statement instanceof UpdateStatement) {
-            if (isset($statement->tables[0])) {
-                $setOperation = $statement->tables[0];
-                $database = $setOperation->database;
-                $table = $setOperation->table;
-            }
-        } else if ($statement instanceof DeleteStatement) {
-            if (isset($statement->from[0])) {
-                $expression = $statement->from[0];
-                $database = $expression->database;
-                $table = $expression->table;
-            }
-        }
+        [$database, $table] = $this->parseDatabaseAndTable($sql);
 
         if ($this->shouldIgnore($database, $table)) {
             return;
@@ -193,6 +158,63 @@ class DbQueryExecutedListener implements ListenerInterface
         if ($this->logSql) {
             $this->logger->info(sprintf('[%s ms] [%s] %s', $event->time, $event->connectionName, $sql));
         }
+    }
+
+    /**
+     * 解析数据库和表名
+     *
+     * @param string $sql SQL语句
+     *
+     * @return array{0:?string,1:?string}
+     * @author Verdient。
+     */
+    protected function parseDatabaseAndTable(string $sql): array
+    {
+        $parser = new Parser($sql);
+
+        if (!isset($parser->statements[0])) {
+            return [null, null];
+        }
+
+        $statement = $parser->statements[0];
+
+        $database = null;
+
+        $table = null;
+
+        if ($statement instanceof SelectStatement) {
+            if (isset($statement->from[0])) {
+                $expression = $statement->from[0];
+                $database = $expression ? $expression->database : null;
+                $table = $expression ? $expression->table : null;
+            } else {
+                if (count($statement->expr) === 1) {
+                    $expression2 = $statement->expr[0];
+                    if ($expression2->subquery === 'SELECT' && $expression2->function === 'EXISTS') {
+                        [$database, $table] = $this->parseDatabaseAndTable(substr($expression2->expr, 7, -1));
+                    }
+                }
+            }
+        } else if ($statement instanceof InsertStatement) {
+            if ($intoKeyword = $statement->into) {
+                $database = $intoKeyword->dest->database;
+                $table = $intoKeyword->dest->table;
+            }
+        } else if ($statement instanceof UpdateStatement) {
+            if (isset($statement->tables[0])) {
+                $setOperation = $statement->tables[0];
+                $database = $setOperation->database;
+                $table = $setOperation->table;
+            }
+        } else if ($statement instanceof DeleteStatement) {
+            if (isset($statement->from[0])) {
+                $expression = $statement->from[0];
+                $database = $expression->database;
+                $table = $expression->table;
+            }
+        }
+
+        return [$database, $table];
     }
 
     /**
