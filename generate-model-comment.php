@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Hyperf\Support\Composer;
 use Verdient\Hyperf3\Database\ColumnManager;
 use Verdient\Hyperf3\Database\Command\CommentGenerator\BuilderGenerator;
 use Verdient\Hyperf3\Database\Command\CommentGenerator\ModelCommentGenerator;
@@ -16,6 +17,8 @@ require $argv[1] . '/vendor/autoload.php';
 $class = $argv[2];
 
 $path = $argv[3];
+
+Composer::getLoader()->addClassMap([$class => $path]);
 
 if (!empty($argv[5])) {
     $reflectionProperty = new ReflectionProperty(ColumnManager::class, 'columns');

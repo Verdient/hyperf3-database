@@ -24,18 +24,11 @@ use function Hyperf\Config\config;
 class FileChangedListener implements ListenerInterface
 {
     /**
-     * @var array<string,string> 模型路径集合
+     * @var array<string,array{'namespace':string,'path':string,'type':string}> 模型路径集合
      *
      * @author Verdient。
      */
-    protected array $modelPaths;
-
-    /**
-     * 类型文件路径
-     *
-     * @author Verdient。
-     */
-    protected string $typesPath;
+    protected array $models;
 
     /**
      * @var int[] 定时器ID集合
@@ -49,8 +42,15 @@ class FileChangedListener implements ListenerInterface
      */
     public function __construct(protected StdoutLoggerInterface $logger)
     {
-        $this->modelPaths = config('dev.models');
-        $this->typesPath = config('dev.types.path', BASE_PATH . '/storage/types');
+        $this->models = [];
+
+        foreach (config('dev.models') as $config) {
+            $this->models[] = [
+                $config['namespace'],
+                rtrim($config['path'], '/') . '/',
+                $config['type']
+            ];
+        }
     }
 
     /**
@@ -74,6 +74,10 @@ class FileChangedListener implements ListenerInterface
     {
         $path = $event->path;
 
+        if (!file_exists($path)) {
+            return;
+        }
+
         if (isset($this->timerIds[$path])) {
             return;
         }
@@ -82,14 +86,14 @@ class FileChangedListener implements ListenerInterface
             unset($this->timerIds[$path]);
         });
 
-        foreach ($this->modelPaths as $namespace => $modelPath) {
-            if (!str_starts_with($path, $modelPath . '/')) {
+        foreach ($this->models as [$namespace, $modelPath, $typePath]) {
+            if (!str_starts_with($path, $modelPath)) {
                 continue;
             }
 
             $extension = pathinfo($path, PATHINFO_EXTENSION);
 
-            $relativePath = substr($path, strlen($modelPath) + 1, -strlen($extension) - 1);
+            $relativePath = substr($path, strlen($modelPath), -strlen($extension) - 1);
 
             $className = $namespace . '\\' . str_replace('/', '\\', $relativePath);
 
@@ -112,7 +116,7 @@ class FileChangedListener implements ListenerInterface
                     escapeshellarg(BASE_PATH),
                     escapeshellarg($className),
                     escapeshellarg($path),
-                    escapeshellarg($this->typesPath),
+                    escapeshellarg($typePath),
                     escapeshellarg(base64_encode(serialize($columns)))
                 ));
 
