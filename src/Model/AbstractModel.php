@@ -24,6 +24,7 @@ use Verdient\Hyperf3\Database\Model\Annotation\DeleteTime;
 use Verdient\Hyperf3\Database\Model\Annotation\Index;
 use Verdient\Hyperf3\Database\Model\Annotation\PrimaryKey;
 use Verdient\Hyperf3\Database\Model\Annotation\Relation;
+use Verdient\Hyperf3\Database\Model\Annotation\Virtual;
 use Verdient\Hyperf3\Database\Model\Index as ModelIndex;
 use Verdient\Hyperf3\Database\Model\PrimaryKey as ModelPrimaryKey;
 
@@ -383,6 +384,8 @@ abstract class AbstractModel implements ModelInterface, IteratorAggregate
 
                 $primaryKey = null;
 
+                $virtual = null;
+
                 $deleteTime = null;
 
                 $modifier = null;
@@ -394,6 +397,8 @@ abstract class AbstractModel implements ModelInterface, IteratorAggregate
                 $column = $attributes->get(ColumnInterface::class)->first();
 
                 $primaryKey = $attributes->get(PrimaryKey::class)->first();
+
+                $virtual = $attributes->get(Virtual::class)->first();
 
                 $deleteTime = $attributes->get(DeleteTime::class)->first();
 
@@ -472,6 +477,8 @@ abstract class AbstractModel implements ModelInterface, IteratorAggregate
                 }
 
                 $column->setAutoIncrement($primaryKey && $primaryKey->autoIncrement);
+
+                $column->setVirtual($virtual !== null);
             }
 
             if (!$column && !$isRelation) {

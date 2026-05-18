@@ -29,6 +29,13 @@ abstract class AbstractProperty implements ColumnInterface
     protected bool $virtual = false;
 
     /**
+     * 默认值
+     * 
+     * @author Verdient。
+     */
+    protected mixed $default = null;
+
+    /**
      * @param string $comment 描述
      * @param bool $nullable 是否允许为空
      * @param ?string $name 名称
@@ -137,6 +144,25 @@ abstract class AbstractProperty implements ColumnInterface
     {
         $this->virtual = $virtual;
 
+        return $this;
+    }
+
+    /**
+     * @author Verdient。
+     */
+    #[Override]
+    public function default(): mixed
+    {
+        return $this->default;
+    }
+
+    /**
+     * @author Verdient。
+     */
+    #[Override]
+    public function setDefault(mixed $default): static
+    {
+        $this->default = $default;
         return $this;
     }
 }

@@ -493,6 +493,8 @@ SQL;
 
         $column->setVirtual($data['virtual']);
 
+        $column->setDefault($data['default']);
+
         return $column;
     }
 

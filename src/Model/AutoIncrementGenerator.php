@@ -7,6 +7,7 @@ namespace Verdient\Hyperf3\Database\Model;
 use DateTime;
 use Override;
 use stdClass;
+use Verdient\Hyperf3\Database\ColumnManager;
 
 /**
  * 自增自成器
@@ -88,7 +89,7 @@ class AutoIncrementGenerator implements GeneratorInterface
     /**
      * 创建模型
      *
-     * @param class-string<ModelInterface> 模型类
+     * @param class-string<ModelInterface> $modelClass 模型类
      *
      * @author Verdient。
      */
@@ -113,14 +114,28 @@ class AutoIncrementGenerator implements GeneratorInterface
     {
         $definition = DefinitionManager::get($model::class);
 
+        $columns = ColumnManager::get($model::class);
+
         foreach ($definition->properties->all() as $modelProperty) {
             if (
-                (!$modelProperty->isDefined && $modelProperty->nullable)
-                || !$modelProperty->column
-                || $modelProperty->column->autoIncrement()
-                || $modelProperty->column->virtual()
-                || $modelProperty->generator
-                || $modelProperty->modifier
+                !$modelProperty->column
+                || $modelProperty->generator !== null
+                || $modelProperty->modifier !== null
+            ) {
+                continue;
+            }
+
+            if (!isset($columns[$modelProperty->column->name()])) {
+                continue;
+            }
+
+            $column = $columns[$modelProperty->column->name()];
+
+            if (
+                $column->isAutoIncrement
+                || $column->column->nullable()
+                || $column->column->virtual()
+                || $column->column->default() !== null
             ) {
                 continue;
             }

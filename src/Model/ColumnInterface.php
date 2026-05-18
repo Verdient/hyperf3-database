@@ -93,6 +93,22 @@ interface ColumnInterface
     public function setVirtual(bool $virtual): static;
 
     /**
+     * 默认值
+     * 
+     * @author Verdient。
+     */
+    public function default(): mixed;
+
+    /**
+     * 设置默认值
+     *
+     * @param mixed $default 默认值
+     *
+     * @author Verdient。
+     */
+    public function setDefault(mixed $default): static;
+
+    /**
      * 蓝图
      *
      * @param string $name 名称
