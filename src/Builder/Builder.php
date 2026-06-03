@@ -1373,7 +1373,7 @@ class Builder implements BuilderInterface
 
         foreach (
             ParallelFetcher::create($fetchers)
-                ->get() as $propertyName => $relationData
+                ->get(10) as $propertyName => $relationData
         ) {
             $with = $this->withs->get($propertyName);
 
@@ -1508,7 +1508,8 @@ class Builder implements BuilderInterface
             if (is_string($propertyName)) {
                 return $model->$propertyName;
             }
-            return reset($model->getOriginals());
+            $originals = $model->getOriginals();
+            return reset($originals);
         }
 
         return null;

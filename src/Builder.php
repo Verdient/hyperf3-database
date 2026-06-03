@@ -18,7 +18,6 @@ use Verdient\Hyperf3\Database\Model\Property;
  * @template TRelationBuilders of array
  *
  * @extends BuilderBuilder<TModel,TRelationBuilders>
- * @implements BuilderInterface<TModel,TRelationBuilders>
  *
  * @author Verdient。
  */

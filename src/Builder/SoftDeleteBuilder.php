@@ -8,6 +8,7 @@ use ErrorException;
 use Override;
 use Verdient\Hyperf3\Database\Builder\Statement\Where;
 use Verdient\Hyperf3\Database\Model\DefinitionManager;
+use Verdient\Hyperf3\Database\Model\ModelInterface;
 
 /**
  * 软删除构造器
@@ -115,7 +116,6 @@ class SoftDeleteBuilder extends Builder implements SoftDeleteBuilderInterface
     /**
      * 转换属性名称为列名称
      *
-     * @param BuilderInterface $builder 查询构造器
      * @param string $propertyName 属性名称
      *
      * @author Verdient。

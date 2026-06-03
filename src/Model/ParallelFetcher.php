@@ -38,10 +38,12 @@ class ParallelFetcher
     /**
      * 获取数据
      *
+     * @param int $concurrent 并发数
+     * 
      * @return Collection<int|string,Collection<int,ModelInterface>>
      * @author Verdient。
      */
-    public function get(): Collection
+    public function get(int $concurrent = 0): Collection
     {
         if (empty($this->fetchers)) {
             return new Collection([]);
@@ -49,15 +51,39 @@ class ParallelFetcher
 
         if (count($this->fetchers) === 1) {
             $keyFirst = array_key_first($this->fetchers);
-            return new Collection([$keyFirst => $this->fetchers[$keyFirst]->get()]);
+            return new Collection([
+                $keyFirst => $this->fetchers[$keyFirst]->get($concurrent)
+            ]);
         }
 
-        $parallel = new Parallel();
+        $parallel = new Parallel($concurrent);
 
-        foreach ($this->fetchers as $index => $fetcher) {
-            $parallel->add(fn() => $fetcher->get(), $index);
+        $indexMap = [];
+
+        $index = 0;
+
+        foreach ($this->fetchers as $fetcherIndex => $fetcher) {
+            foreach ($fetcher->toUnits() as $unit) {
+                $indexMap[$index] = $fetcherIndex;
+                $parallel->add($unit, $index);
+                $index++;
+            }
         }
 
-        return new Collection($parallel->wait());
+        $result = [];
+
+        foreach ($this->fetchers as $fetcherIndex => $fetcher) {
+            $result[$fetcherIndex] = new Collection();
+        }
+
+        foreach ($parallel->wait() as $index => $rows) {
+            $fetcherIndex = $indexMap[$index];
+
+            foreach ($rows as $row) {
+                $result[$fetcherIndex]->add($row);
+            }
+        }
+
+        return new Collection($result);
     }
 }

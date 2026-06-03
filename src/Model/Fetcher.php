@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Verdient\Hyperf3\Database\Model;
 
+use Closure;
 use Hyperf\Coroutine\Parallel;
 use Verdient\Hyperf3\Database\Builder\BuilderInterface;
 use Verdient\Hyperf3\Database\Collection;
@@ -51,11 +52,13 @@ class Fetcher
 
     /**
      * 获取数据
+     * 
+     * @param int $concurrent 并发数
      *
      * @return Collection<int,ModelInterface>
      * @author Verdient。
      */
-    public function get(): Collection
+    public function get(int $concurrent = 0): Collection
     {
         if (empty($this->values)) {
             return new Collection();
@@ -73,12 +76,10 @@ class Fetcher
 
         $chunkedIds = array_chunk($values, $this->chunkSize);
 
-        $parallel = new Parallel();
+        $parallel = new Parallel($concurrent);
 
         foreach ($chunkedIds as $partIds) {
-            $parallel->add(function () use ($partIds) {
-                return $this->fetch($partIds);
-            });
+            $parallel->add(fn() => $this->fetch($partIds));
         }
 
         $result = [];
@@ -90,6 +91,39 @@ class Fetcher
         }
 
         return new Collection($result);
+    }
+
+    /**
+     * 转换为获取单元
+     * 
+     * @return array<int,Closure>
+     * @author Verdient。
+     */
+    public function toUnits(): array
+    {
+        if (empty($this->values)) {
+            return [fn() => new Collection()];
+        }
+
+        if (is_string($this->columnName)) {
+            $values = array_unique($this->values);
+        } else {
+            $values = $this->values;
+        }
+
+        if (count($values) <= $this->chunkSize) {
+            return [fn() => $this->fetch($values)];
+        }
+
+        $result = [];
+
+        $chunkedIds = array_chunk($values, $this->chunkSize);
+
+        foreach ($chunkedIds as $partIds) {
+            $result[] = fn() => $this->fetch($partIds);
+        }
+
+        return $result;
     }
 
     /**
