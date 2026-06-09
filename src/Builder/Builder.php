@@ -701,7 +701,11 @@ class Builder implements BuilderInterface
             return $this->whereIn(reset($propertyNames), reset($values));
         }
 
-        $quotedColumnNames = array_map(fn($value) => '"' . $value . '"', $columns);
+        if ($this->getQueryGrammar() instanceof PostgresGrammar) {
+            $quotedColumnNames = array_map(fn($value) => '"' . $value . '"', $columns);
+        } else {
+            $quotedColumnNames = array_map(fn($value) => '`' . $value . '`', $columns);
+        }
 
         $columnPart = '(' . implode(', ', $quotedColumnNames) . ')';
 
@@ -709,7 +713,7 @@ class Builder implements BuilderInterface
 
         $rawValues = implode(', ', array_fill(0, $count, $valuePart));
 
-        $raw = "$columnPart IN ($rawValues)";
+        $raw = "$columnPart in ($rawValues)";
 
         $flattenedValues = [];
 
@@ -728,7 +732,65 @@ class Builder implements BuilderInterface
     #[Override]
     public function whereNotInTuple(array $propertyNames, array|Arrayable $values, string $boolean = 'and'): static
     {
-        $this->wheres->add(new Where('whereNotInTuple', [$propertyNames, $values, $boolean]));
+        if ($values instanceof Arrayable) {
+            $values = $values->toArray();
+        }
+
+        if (count($propertyNames) !== count($values)) {
+            throw new InvalidArgumentException('The number of propertyNames and values must be equal.');
+        }
+
+        $count = count($values[0]);
+
+        foreach ($values as $partValues) {
+            if (count($partValues) !== $count) {
+                throw new InvalidArgumentException('The number of each element in values must be equal.');
+            }
+        }
+
+        if ($count === 0) {
+            return $this;
+        }
+
+        if (count($propertyNames) === 1) {
+            return $this->whereNotIn(reset($propertyNames), reset($values));
+        }
+
+        $columns = [];
+
+        foreach ($propertyNames as $propertyName) {
+            $columns[] = $this->toColumnName($propertyName);
+        }
+
+        $columns = array_unique($columns);
+
+        if (count($columns) === 1) {
+            return $this->whereNotIn(reset($propertyNames), reset($values));
+        }
+
+        if ($this->getQueryGrammar() instanceof PostgresGrammar) {
+            $quotedColumnNames = array_map(fn($value) => '"' . $value . '"', $columns);
+        } else {
+            $quotedColumnNames = array_map(fn($value) => '`' . $value . '`', $columns);
+        }
+
+        $columnPart = '(' . implode(', ', $quotedColumnNames) . ')';
+
+        $valuePart = '(' . implode(', ', array_fill(0, count($columns), '?')) . ')';
+
+        $rawValues = implode(', ', array_fill(0, $count, $valuePart));
+
+        $raw = "$columnPart not in ($rawValues)";
+
+        $flattenedValues = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            for ($m = 0; $m < count($columns); $m++) {
+                $flattenedValues[] = $values[$m][$i];
+            }
+        }
+
+        return $this->whereRaw($raw, $flattenedValues, $boolean);
 
         return $this;
     }
