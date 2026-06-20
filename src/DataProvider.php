@@ -113,9 +113,7 @@ class DataProvider implements Arrayable, Jsonable
     /**
      * 构造函数
      *
-     * @template T
-     *
-     * @param BuilderInterface<T>|(BuilderInterface<T>&SoftDeleteBuilder<T>) $builder 查询构造器
+     * @param BuilderInterface<TModel>|(BuilderInterface<TModel>&SoftDeleteBuilder<TModel>) $builder 查询构造器
      * @param ?DataFilter $filter 数据过滤器
      *
      * @author Verdient。
