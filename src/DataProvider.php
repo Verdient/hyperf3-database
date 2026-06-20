@@ -546,4 +546,12 @@ class DataProvider implements Arrayable, Jsonable
     {
         return Json::encode($this->toArray());
     }
+
+    /**
+     * @author Verdient。
+     */
+    public function toJson(int $options = 0): string
+    {
+        return Json::encode($this->toArray(), $options);
+    }
 }
