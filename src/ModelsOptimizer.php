@@ -578,26 +578,35 @@ class ModelsOptimizer
                     ...$beforeActions,
                     (function () use ($payload, $builder) {
                         $values = $payload->values;
-
-                        $chunks = [];
-
-                        $count = 0;
-
-                        while (!empty($values)) {
-                            $chunk =  array_shift($values);
-                            $count += count($chunk);
-
-                            if ($count > 65000) {
-                                $builder->insert($chunks);
-                                $chunks = [$chunk];
-                                $count = count($chunk);
+                        $groups = [];
+                        foreach ($values as $value) {
+                            ksort($value);
+                            $key = md5(serialize(array_keys($value)));
+                            if (isset($groups[$key])) {
+                                $groups[$key][] = $value;
                             } else {
-                                $chunks[] = $chunk;
+                                $groups[$key] = [$value];
                             }
                         }
-
-                        if (!empty($chunks)) {
-                            $builder->insert($chunks);
+                        foreach ($groups as $groupValues) {
+                            $chunks = [];
+                            $count = 0;
+                            foreach ($groupValues as $value) {
+                                $fieldCount = count($value);
+                                if ($count + $fieldCount > 65000) {
+                                    if (!empty($chunks)) {
+                                        $builder->insert($chunks);
+                                    }
+                                    $chunks = [$value];
+                                    $count = $fieldCount;
+                                } else {
+                                    $chunks[] = $value;
+                                    $count += $fieldCount;
+                                }
+                            }
+                            if (!empty($chunks)) {
+                                $builder->insert($chunks);
+                            }
                         }
                     })->bindTo(null),
                     ...$afterActions
@@ -605,8 +614,6 @@ class ModelsOptimizer
             ) {
                 $actions[] = $action;
             }
-
-            unset($attributes);
         }
 
         return $actions;
