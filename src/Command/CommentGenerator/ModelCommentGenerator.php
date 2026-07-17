@@ -8,6 +8,7 @@ use PhpParser\NodeTraverser;
 use PhpParser\ParserFactory;
 use Verdient\Hyperf3\Database\Command\CommentNodeVisitor;
 use Verdient\Hyperf3\Database\Command\PrettyPrinter;
+use Verdient\Hyperf3\Database\Model\ModelInterface;
 
 /**
  * 模型注释生成器

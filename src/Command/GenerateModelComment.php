@@ -22,6 +22,13 @@ use Verdient\Hyperf3\Database\Model\ModelInterface;
 class GenerateModelComment extends CommandCommand
 {
     /**
+     * @var array<string,array{'namespace':string,'path':string,'type':string}> 模型路径集合
+     *
+     * @author Verdient。
+     */
+    protected array $models;
+
+    /**
      * 构造函数
      *
      * @author Verdient。
@@ -30,6 +37,16 @@ class GenerateModelComment extends CommandCommand
     {
         parent::__construct('dev:generate-model-comment');
         $this->setDescription('生成模型注释');
+
+        $this->models = [];
+
+        foreach ($this->container->get(ConfigInterface::class)->get('dev.models') as $config) {
+            $this->models[] = [
+                $config['namespace'],
+                rtrim($config['path'], '/'),
+                rtrim($config['type'], '/')
+            ];
+        }
     }
 
     /**
@@ -39,41 +56,35 @@ class GenerateModelComment extends CommandCommand
      */
     public function handle()
     {
-        $paths = $this->container->get(ConfigInterface::class)->get('dev.models');
-
-        if (empty($paths)) {
-            $this->error('请在 dev.models 中配置需生成注释的模型命名空间和路径');
-            return 1;
-        }
-
         $classes = [];
 
-        foreach ($paths as $namespace => $path) {
-            foreach ($this->collectModels($path, $namespace) as $class => $path) {
-                $classes[$class] = $path;
+        foreach ($this->models as [$namespace, $path, $type]) {
+            if (!is_dir($path)) {
+                continue;
+            }
+            foreach ($this->collectModels($path, $namespace) as $class => $path2) {
+                if (!isset($classes[$type])) {
+                    $classes[$type] = [];
+                }
+
+                $classes[$type][$class] = $path2;
             }
         }
 
-        $typesPath = $this
-            ->container
-            ->get(ConfigInterface::class)
-            ->get('dev.types.path', constant('BASE_PATH') . '/storage/types');
-
-        $builderGenerator = new BuilderGenerator($typesPath);
-
-        $builderGenerator->clear(array_keys($classes));
-
-        $modelCommentGenerator = (new ModelCommentGenerator($builderGenerator));
-
         $count = 0;
 
-        foreach ($classes as $class => $path) {
+        foreach ($classes as $typePath => $classes2) {
+            $builderGenerator = new BuilderGenerator($typePath);
+            $builderGenerator->clear(array_keys($classes2));
+            $modelCommentGenerator = (new ModelCommentGenerator($builderGenerator));
 
-            $count++;
+            foreach ($classes2 as $class => $path) {
+                $count++;
 
-            Console::progress($count, count($classes), '模型注释生成中……');
+                Console::progress($count, count($classes2), '模型注释生成中……');
 
-            $modelCommentGenerator->generate($class, $path);
+                $modelCommentGenerator->generate($class, $path);
+            }
         }
     }
 
@@ -101,8 +112,8 @@ class GenerateModelComment extends CommandCommand
                     $result[$class] = $splFileInfo->getPathname();
                 }
             } else {
-                foreach ($this->collectModels($splFileInfo->getPathname(), $namespace . '\\' . $splFileInfo->getFilename()) as $class => $path) {
-                    $result[$class] = $path;
+                foreach ($this->collectModels($splFileInfo->getPathname(), $namespace . '\\' . $splFileInfo->getFilename()) as $class => $path2) {
+                    $result[$class] = $path2;
                 }
             }
         }
