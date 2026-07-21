@@ -972,9 +972,29 @@ class Builder implements BuilderInterface
      * @author Verdient。
      */
     #[Override]
-    public function whereProperty(string|Expression $propertyName1, string $operator, string|Expression $propertyName12, string $boolean = 'and')
+    public function whereJsonOverlaps(string|Expression $propertyName, mixed $value, string $boolean = 'and'): static
     {
-        $this->wheres->add(new Where('whereProperty', [$propertyName1, $operator, $propertyName12, $boolean]));
+        $this->wheres->add(new Where('whereJsonOverlaps', [$propertyName, $value, $boolean]));
+        return $this;
+    }
+
+    /**
+     * @author Verdient。
+     */
+    #[Override]
+    public function whereJsonDoesntOverlap(string|Expression $propertyName, mixed $value, string $boolean = 'and'): static
+    {
+        $this->wheres->add(new Where('whereJsonDoesntOverlap', [$propertyName, $value, $boolean]));
+        return $this;
+    }
+
+    /**
+     * @author Verdient。
+     */
+    #[Override]
+    public function whereProperty(string|Expression $propertyName1, string $operator, string|Expression $propertyName2, string $boolean = 'and')
+    {
+        $this->wheres->add(new Where('whereProperty', [$propertyName1, $operator, $propertyName2, $boolean]));
         return $this;
     }
 

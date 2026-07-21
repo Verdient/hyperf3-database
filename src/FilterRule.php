@@ -126,8 +126,20 @@ class FilterRule extends AbstractFilterRule
             case 'jsonContains':
                 $builder->whereJsonContains($field, $value, $this->boolean);
                 break;
+            case 'jsonDoesntContain':
+                $builder->whereJsonDoesntContain($field, $value, $this->boolean);
+                break;
+            case 'jsonOverlaps':
+                $builder->whereJsonOverlaps($field, $value, $this->boolean);
+                break;
+            case 'jsonDoesntOverlap':
+                $builder->whereJsonDoesntOverlap($field, $value, $this->boolean);
+                break;
             case 'bitContains':
                 $builder->whereBitContains($field, $value, $this->boolean);
+                break;
+            case 'bitDoesntContain':
+                $builder->whereBitDoesntContain($field, $value, $this->boolean);
                 break;
             default:
                 $builder->where($field, $this->operator, $value, $this->boolean);

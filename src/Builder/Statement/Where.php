@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Verdient\Hyperf3\Database\Builder\Statement;
 
+use Closure;
 use Override;
 use Verdient\Hyperf3\Database\Builder\BuilderInterface;
 use Verdient\Hyperf3\Database\Builder\QueryBuilder;
@@ -65,7 +66,9 @@ class Where extends AbstractStatement
             'whereInTuple',
             'whereNotInTuple',
             'whereJsonContains',
-            'whereJsonDoesntContain'
+            'whereJsonDoesntContain',
+            'whereJsonOverlaps',
+            'whereJsonDoesntOverlap',
         ])) {
             if (is_string($this->arguments[0])) {
                 $arguments = $this->arguments;

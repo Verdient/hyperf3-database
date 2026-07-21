@@ -382,6 +382,28 @@ interface BuilderInterface
     public function whereJsonDoesntContain(string|Expression $propertyName, mixed $value, string $boolean = 'and'): static;
 
     /**
+     * JSON字段重叠查询条件
+     *
+     * @param string|Expression $propertyName 属性名称
+     * @param mixed $value 值
+     * @param string $boolean 逻辑关系
+     *
+     * @author Verdient。
+     */
+    public function whereJsonOverlaps(string|Expression $propertyName, mixed $value, string $boolean = 'and'): static;
+
+    /**
+     * JSON字段不重叠查询条件
+     *
+     * @param string|Expression $propertyName 属性名称
+     * @param mixed $value 值
+     * @param string $boolean 逻辑关系
+     *
+     * @author Verdient。
+     */
+    public function whereJsonDoesntOverlap(string|Expression $propertyName, mixed $value, string $boolean = 'and'): static;
+
+    /**
      * 属性字段查询条件
      *
      * @param string|Expression $propertyName1 属性名称1
@@ -391,7 +413,7 @@ interface BuilderInterface
      *
      * @author Verdient。
      */
-    public function whereProperty(string|Expression $propertyName1, string $operator, string|Expression $propertyName12,  string $boolean = 'and');
+    public function whereProperty(string|Expression $propertyName1, string $operator, string|Expression $propertyName2,  string $boolean = 'and');
 
     /**
      * 运算查询条件
