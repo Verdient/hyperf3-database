@@ -234,16 +234,20 @@ abstract class AbstractModel implements ModelInterface, IteratorAggregate
 
             if (array_key_exists($property->name, $originals)) {
                 if ($value !== $originals[$property->name]) {
-                    if (
-                        $property->column instanceof DecimalNumberInterface
-                        && Utils::decimalEquals((string) $value, (string) $originals[$property->name])
-                    ) {
-                        continue;
+                    if ($property->column instanceof DecimalNumberInterface) {
+                        if (Utils::decimalEquals((string) $value, (string) $originals[$property->name])) {
+                            continue;
+                        }
                     } else if ($property->isBitMap) {
                         if ($value && $originals[$property->name] && $value->value === $originals[$property->name]->value) {
                             continue;
                         }
+                    } else if ($property->isJson) {
+                        if (Utils::arrayEquals((array) $value, (array) $originals[$property->name])) {
+                            continue;
+                        }
                     }
+
                     $result[$property->name] = $value;
                 }
             } else {

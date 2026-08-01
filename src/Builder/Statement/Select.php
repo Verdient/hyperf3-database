@@ -72,7 +72,7 @@ class Select extends AbstractStatement
             $tableName = $builder->getModelClass()::tableName();
 
             foreach ($joins->all() as $join) {
-                if ($join->hasColumnName($columnName)) {
+                if ($join->hasColumnName($columnName) || $columnName === '*') {
                     $columnName = $tableName . '.' . $columnName;
                     break;
                 }

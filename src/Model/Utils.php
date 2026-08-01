@@ -381,6 +381,39 @@ class Utils
     }
 
     /**
+     * 格式化数组
+     *
+     * @author Verdient。
+     */
+    public static function normalizeArray(array $array): array
+    {
+        if (!array_is_list($array)) {
+            ksort($array);
+        }
+
+        foreach ($array as $key => $value) {
+            if (is_array($value)) {
+                $array[$key] = static::normalizeArray($array);
+            }
+        }
+
+        return $array;
+    }
+
+    /**
+     * 判断两个数组是否相等
+     *
+     * @param array $a 数组1
+     * @param array $b 数组2
+     *
+     * @author Verdient。
+     */
+    public static function arrayEquals(array $a, array $b): bool
+    {
+        return static::normalizeArray($a) === static::normalizeArray($b);
+    }
+
+    /**
      * 序列化模型的数据
      *
      * @param class-string<ModelInterface> $class 模型类
