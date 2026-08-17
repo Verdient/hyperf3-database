@@ -75,6 +75,7 @@ class ColumnManager
         static::$columns[$modelClass] = match ($connection->getDriverName()) {
             'mysql' => static::getMySQLColumns($connection, $tableName),
             'pgsql' => static::getPostgreSQLColumns($connection, $tableName),
+            'sqlite' => static::getSQLiteColumns($connection, $tableName),
             default => []
         };
 
@@ -280,6 +281,67 @@ SQL;
         return $columns;
     }
 
+    /**
+     * 获取SQLite字段
+     *
+     * @param Connection $connection 连接
+     * @param string $tableName 表名
+     *
+     * @author Verdient。
+     */
+    protected static function getSQLiteColumns(Connection $connection, string $tableName): array
+    {
+        $quotedTableName = '"'
+            . str_replace('"', '""', $tableName)
+            . '"';
+
+        $rows = $connection->select(
+            'PRAGMA table_xinfo(' . $quotedTableName . ')'
+        );
+
+        if (empty($rows)) {
+            return [];
+        }
+
+        $primaryKeyCount = 0;
+
+        foreach ($rows as $row) {
+            $row = array_change_key_case(
+                (array) $row,
+                CASE_LOWER
+            );
+            if ((int) ($row['pk'] ?? 0) > 0) {
+                ++$primaryKeyCount;
+            }
+        }
+
+        $columns = [];
+        foreach ($rows as $row) {
+            $row = array_change_key_case(
+                (array) $row,
+                CASE_LOWER
+            );
+            $name = (string) $row['name'];
+            $type = trim((string) ($row['type'] ?? ''));
+            $isPrimaryKey = (int) ($row['pk'] ?? 0) > 0;
+            $columns[$name] = static::toColumn([
+                'name' => $name,
+                'type' => strtolower($type),
+                'default' => $row['dflt_value'] ?? null,
+                'nullable' => !$isPrimaryKey
+                    && (int) ($row['notnull'] ?? 0) === 0,
+                'comment' => '',
+                'is_primary_key' => $isPrimaryKey,
+                'unsigned' => false,
+                'auto_increment' => $isPrimaryKey
+                    && $primaryKeyCount === 1
+                    && strcasecmp($type, 'INTEGER') === 0,
+                'virtual' => (int) ($row['hidden'] ?? 0) === 2,
+            ]);
+        }
+
+        return $columns;
+    }
 
     /**
      * 将数据转换为列
