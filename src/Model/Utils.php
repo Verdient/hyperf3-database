@@ -393,7 +393,7 @@ class Utils
 
         foreach ($array as $key => $value) {
             if (is_array($value)) {
-                $array[$key] = static::normalizeArray($array);
+                $array[$key] = static::normalizeArray($value);
             }
         }
 
