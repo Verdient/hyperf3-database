@@ -52,13 +52,19 @@ class Where extends AbstractStatement
 
         $method = $this->method;
 
+        if (in_array($method, ['whereInSub', 'whereNotInSub'])) {
+            $arguments = $this->arguments;
+            $arguments[0] = is_string($arguments[0]) ? $this->toColumnName($builder, $arguments[0]) : $arguments[0];
+            $arguments[1] = $arguments[1]->toBase();
+            $this->buildWhere($builder, $method === 'whereInSub' ? 'whereIn' : 'whereNotIn', $arguments);
+            return;
+        }
+
         if (in_array($method, [
             'where',
             'orWhere',
             'whereIn',
             'whereNotIn',
-            'whereInSub',
-            'whereNotInSub',
             'whereBetween',
             'whereNotBetween',
             'whereNull',
