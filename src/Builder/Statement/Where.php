@@ -55,7 +55,7 @@ class Where extends AbstractStatement
         if (in_array($method, ['whereInSub', 'whereNotInSub'])) {
             $arguments = $this->arguments;
             $arguments[0] = is_string($arguments[0]) ? $this->toColumnName($builder, $arguments[0]) : $arguments[0];
-            $arguments[1] = $arguments[1]->toBase();
+            $arguments[1] = $arguments[1]->disablePropertyCompletion()->toBase();
             $this->buildWhere($builder, $method === 'whereInSub' ? 'whereIn' : 'whereNotIn', $arguments);
             return;
         }
