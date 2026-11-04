@@ -140,7 +140,7 @@ class Utils
         foreach ($definition->primaryKeys->all() as $primaryKey) {
             $primaryKeyName = $primaryKey->property->name;
 
-            $primaryKeyValue = $primaryKey->property->getValue($model);
+            $primaryKeyValue = $model->getOriginal($primaryKey->property->name);
 
             if ($primaryKeyValue === null) {
                 throw new RuntimeException('The value of primary key ' . $primaryKeyName . ' of model ' . $modelClass . ' cannot be null.');
