@@ -308,7 +308,7 @@ abstract class AbstractModel implements ModelInterface, IteratorAggregate
         $builder = static::query();
 
         foreach ($primaryKeys->all() as $primaryKey) {
-            $builder->where($primaryKey->property->name, '=', $primaryKey->property->getValue($this));
+            $builder->where($primaryKey->property->name, '=', $this->getOriginal($primaryKey->property->name));
         }
 
         $affectedRows = $builder

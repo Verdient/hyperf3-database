@@ -359,7 +359,7 @@ class ModelsOptimizer
 
             foreach ($modelUnits as $modelUnit) {
                 foreach ($primaryKeys as $index => $primaryKey) {
-                    $conditionValues[$index][] = $primaryKey->property->getValue($modelUnit->model);
+                    $conditionValues[$index][] = $modelUnit->model->getOriginal($primaryKey->property->name);
                 }
             }
 
@@ -448,7 +448,7 @@ class ModelsOptimizer
                 $values = Utils::serialize($modelClass, $model->getDirty());
 
                 foreach ($primaryKeys as $index => $primaryKey) {
-                    $conditionValues[$index][] = $primaryKey->property->getValue($modelUnit->model);
+                    $conditionValues[$index][] = $modelUnit->model->getOriginal($primaryKey->property->name);
                 }
 
                 $key = md5(serialize($values));

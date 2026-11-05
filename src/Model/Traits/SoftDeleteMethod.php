@@ -55,7 +55,9 @@ trait SoftDeleteMethod
         }
 
         foreach ($primaryKeys->all() as $primaryKey) {
-            if (!$primaryKey->property->getValue($this)) {
+            $primaryKeyValue = $this->getOriginal($primaryKey->property->name);
+
+            if ($primaryKeyValue === null) {
                 throw new RuntimeException('The value of primary key ' . $primaryKey->property->name . ' of model ' . static::class . ' cannot be null.');
             }
         }
@@ -73,7 +75,7 @@ trait SoftDeleteMethod
         $builder = static::query()->withTrashed();
 
         foreach ($primaryKeys->all() as $primaryKey) {
-            $builder->where($primaryKey->property->name, '=', $primaryKey->property->getValue($this));
+            $builder->where($primaryKey->property->name, '=', $this->getOriginal($primaryKey->property->name));
         }
 
         $dateTime = new DateTime();
@@ -165,7 +167,9 @@ trait SoftDeleteMethod
         }
 
         foreach ($primaryKeys->all() as $primaryKey) {
-            if (!$primaryKey->property->getValue($this)) {
+            $primaryKeyValue = $this->getOriginal($primaryKey->property->name);
+
+            if ($primaryKeyValue === null) {
                 throw new RuntimeException('The value of primary key ' . $primaryKey->property->name . ' of model ' . static::class . ' cannot be null.');
             }
         }
@@ -184,7 +188,7 @@ trait SoftDeleteMethod
             ->withTrashed();
 
         foreach ($primaryKeys->all() as $primaryKey) {
-            $builder->where($primaryKey->property->name, '=', $primaryKey->property->getValue($this));
+            $builder->where($primaryKey->property->name, '=', $this->getOriginal($primaryKey->property->name));
         }
 
         $dirtyData = $this->getDirty();
@@ -233,7 +237,9 @@ trait SoftDeleteMethod
         }
 
         foreach ($primaryKeys->all() as $primaryKey) {
-            if (!$primaryKey->property->getValue($this)) {
+            $primaryKeyValue = $this->getOriginal($primaryKey->property->name);
+
+            if ($primaryKeyValue === null) {
                 throw new RuntimeException('The value of primary key ' . $primaryKey->property->name . ' of model ' . static::class . ' cannot be null.');
             }
         }
@@ -246,7 +252,7 @@ trait SoftDeleteMethod
             ->withTrashed();
 
         foreach ($primaryKeys->all() as $primaryKey) {
-            $builder->where($primaryKey->property->name, '=', $primaryKey->property->getValue($this));
+            $builder->where($primaryKey->property->name, '=', $this->getOriginal($primaryKey->property->name));
         }
 
         $affectedRows = $builder
