@@ -7,7 +7,6 @@ namespace Verdient\Hyperf3\Database\Command;
 use Override;
 use PhpParser\Comment\Doc;
 use PhpParser\Node;
-use PhpParser\Node\Stmt\PropertyProperty;
 use PhpParser\NodeVisitorAbstract;
 
 /**
@@ -42,7 +41,6 @@ class CommentNodeVisitor extends NodeVisitorAbstract
             if (
                 !empty($this->propertyComments)
                 && isset($node->props[0])
-                && $node->props[0] instanceof PropertyProperty
             ) {
 
                 $name = $node->props[0]->name->name;

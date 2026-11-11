@@ -25,7 +25,7 @@ class PrettyPrinter extends Standard
      * @author Verdient。
      */
     #[Override]
-    protected function pStmt_Declare(Declare_ $node)
+    protected function pStmt_Declare(Declare_ $node): string
     {
         return 'declare(' . $this->pCommaSeparated($node->declares) . ')'
             . (null !== $node->stmts ? ' {' . $this->pStmts($node->stmts) . $this->nl . '}' : ';') . "\n";
@@ -35,7 +35,7 @@ class PrettyPrinter extends Standard
      * @author Verdient。
      */
     #[Override]
-    protected function pStmt_Property(Property $node)
+    protected function pStmt_Property(Property $node): string
     {
         return parent::pStmt_Property($node) . "\n";
     }
@@ -44,7 +44,7 @@ class PrettyPrinter extends Standard
      * @author Verdient。
      */
     #[Override]
-    protected function pStmt_ClassMethod(ClassMethod $node)
+    protected function pStmt_ClassMethod(ClassMethod $node): string
     {
         $result = $this->pAttrGroups($node->attrGroups)
             . $this->pModifiers($node->flags)
@@ -70,7 +70,7 @@ class PrettyPrinter extends Standard
      * @author Verdient。
      */
     #[Override]
-    protected function pClassCommon(Class_ $node, $afterClassToken)
+    protected function pClassCommon(Class_ $node, $afterClassToken): string
     {
         $result = $this->pAttrGroups($node->attrGroups, $node->name === null)
             . $this->pModifiers($node->flags)
