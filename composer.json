@@ -25,8 +25,8 @@
         "psr/container": "^2.0",
         "psr/log": "^3.0",
         "verdient/cli": "^1.0",
-        "verdient/hyperf3-enum": "^2.1",
-        "verdient/hyperf3-watcher": "^2.1"
+        "verdient/hyperf3-enum": "^3.2",
+        "verdient/hyperf3-watcher": "^3.2"
     },
     "require-dev": {
         "swoole/ide-helper": "^6.0"
